@@ -5,6 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>H&amp;G Armory</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
+<meta name="description" content="H&amp;G Armory is a free Heroes &amp; Generals weapon stats database and comparison tool. Compare damage, DPS, time-to-kill, recoil, accuracy, armor penetration and reload times for every rifle, SMG, LMG, pistol, anti-tank launcher, grenade and mine, with attachments, ammo types and badges.">
+<meta name="keywords" content="Heroes and Generals, H&amp;G, weapon stats, damage calculator, TTK, DPS, gun comparison, Heroes and Generals weapons">
+<meta name="author" content="zewm">
+<link rel="canonical" href="https://hng-armory.top/">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#15170f">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="H&amp;G Armory">
+<meta property="og:url" content="https://hng-armory.top/">
+<meta property="og:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon Stats">
+<meta property="og:description" content="Free Heroes &amp; Generals weapon stats: damage, DPS, time-to-kill, recoil, accuracy and armor penetration for every weapon, with attachments, ammo and badges. Compare any two or three weapons side by side.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon Stats">
+<meta name="twitter:description" content="Free Heroes &amp; Generals weapon stats and comparison tool: damage, DPS, TTK, recoil, accuracy, armor penetration.">
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication",
+"name":"H&G Armory","url":"https://hng-armory.top/",
+"applicationCategory":"GameApplication","operatingSystem":"Any (web browser)",
+"description":"Heroes & Generals weapon stats database and comparison tool covering damage, DPS, time-to-kill, recoil, accuracy, armor penetration and reload times, with attachments, ammunition types and badges.",
+"author":{"@type":"Person","name":"zewm"},
+"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
+"about":{"@type":"VideoGame","name":"Heroes & Generals"}}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -215,6 +240,9 @@ th{font-family:"Oswald";text-transform:uppercase;letter-spacing:.08em;font-size:
 th[aria-sort]{color:var(--brass)}
 td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{background:var(--panel)}
 .faction-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:7px;vertical-align:middle}
+.seo-intro{max-width:760px;margin-bottom:22px;color:var(--ink-dim);font-size:14px;line-height:1.6}
+.seo-intro h1{font-family:"Oswald";font-size:22px;letter-spacing:.06em;color:var(--brass);margin:0 0 10px;text-transform:uppercase}
+.seo-intro p{margin:0 0 10px}
 .notice{background:#221d10;border:1px solid var(--brass-dim);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--ink-dim);line-height:1.5;margin-bottom:20px}
 .notice b{color:var(--brass);font-family:"Oswald";letter-spacing:.05em}
 </style>
@@ -247,6 +275,21 @@ td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{backgro
 
   <main class="main">
     <section class="detailview" id="detailView">
+      <div id="seoIntro" class="seo-intro">
+        <h1>H&amp;G Armory — Heroes &amp; Generals Weapon Stats</h1>
+        <p>H&amp;G Armory is a free weapon statistics database and comparison tool for the WWII shooter
+        Heroes &amp; Generals. Every value is computed from the game's datamined values, covering
+        damage and damage falloff, damage per second, hits to kill, time to kill, rate of fire, muzzle
+        velocity, effective range, cone of fire, recoil, sway, reload time, armor damage, armor
+        penetration and credit costs.</p>
+        <p>All infantry equipment is included for the US, German and Soviet factions: rifles and
+        bolt-action rifles, sub machine guns, light machine guns, handguns, anti-tank launchers such as
+        the Bazooka, Panzerschreck and Panzerfaust, plus grenades, mines and other gear. Loadouts can be
+        configured with attachments, alternative ammunition types and the Fast Reload, Iron Fist,
+        Heavy Set and Grenadier badges, and any two or three weapons can be compared side by side.</p>
+        <noscript><p><strong>JavaScript is required to use the interactive weapon
+        database.</strong> Please enable JavaScript to browse and compare weapon statistics.</p></noscript>
+      </div>
       <div class="sheet-head">
         <div><div class="name disp" id="wName">—</div><div class="meta" id="wMeta"></div></div>
       </div>
@@ -1233,6 +1276,10 @@ $("#search").oninput=e=>buildSidebar(e.target.value);
     else done();
   };
 })();
+
+// The static intro exists so crawlers (and no-JS visitors) see real content, since the
+// app builds everything client-side. Once the interactive UI is up, it's redundant.
+(function(){const s=document.getElementById("seoIntro"); if(s)s.style.display="none";})();
 
 ensureVisible(state.wid); buildSidebar(); renderDetail();
 </script>
