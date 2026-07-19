@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tzm13.github.io/HnG-Armory/sitemap.xml
+Sitemap: https://hng-armory.top/sitemap.xml
