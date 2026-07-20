@@ -20,10 +20,10 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="H&amp;G Armory">
 <meta property="og:url" content="https://hng-armory.top/">
-<meta property="og:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon Stats">
+<meta property="og:title" content="H&amp;G Armory - Heroes &amp; Generals Weapon Stats">
 <meta property="og:description" content="Free Heroes &amp; Generals weapon stats: damage, DPS, time-to-kill, recoil, accuracy and armor penetration for every weapon, with attachments, ammo and badges. Compare any two or three weapons side by side.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon Stats">
+<meta name="twitter:title" content="H&amp;G Armory - Heroes &amp; Generals Weapon Stats">
 <meta name="twitter:description" content="Free Heroes &amp; Generals weapon stats and comparison tool: damage, DPS, TTK, recoil, accuracy, armor penetration.">
 
 <script type="application/ld+json">
@@ -206,7 +206,7 @@ a{color:var(--brass)}
 .vs-pickbox{display:flex;align-items:center;gap:8px;flex:1 1 200px}
 .vs-dot{width:12px;height:12px;border-radius:3px;flex:none;box-shadow:0 0 0 1px #0004 inset}
 .vs-pick{flex:1;background:#12140d;color:var(--ink);border:1px solid var(--line);padding:8px 9px;border-radius:var(--radius);font-size:14px}
-.vs-table{width:100%;max-width:900px;border-collapse:collapse;font-size:13px;margin-top:4px;table-layout:fixed}
+.vs-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px;table-layout:fixed}
 .vs-col-lbl{width:170px}
 .vs-col{width:240px}
 .vs-table th,.vs-table td{padding:5px 14px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -217,7 +217,13 @@ a{color:var(--brass)}
 .vs-grouplbl{text-align:left !important;font-family:"Oswald";text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--brass)}
 .vs-text{font-family:"Barlow Semi Condensed" !important;color:var(--ink-dim)}
 .vs-empty{border-bottom:1px solid var(--line)}
-.vs-chart{max-width:620px}
+.vs-area{display:flex;gap:18px;align-items:flex-start}
+.vs-tablewrap{flex:1 1 auto;min-width:0;overflow-x:auto}
+.vs-charts{flex:0 0 420px;position:sticky;top:6px}
+.vs-charts .chartwrap{max-width:none;margin:0;padding:8px}
+.vs-charts .mini-grid{grid-template-columns:1fr}
+.vs-charts .chart-legend{font-size:10px;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+@media(max-width:1250px){.vs-area{flex-wrap:wrap}.vs-charts{flex-basis:100%;position:static}.vs-charts .mini-grid{grid-template-columns:1fr 1fr}}
 .vs-tablewrap{overflow-x:auto}
 .vs-table td{font-family:"JetBrains Mono"}
 .vs-table td small{color:var(--ink-dim);font-size:10px}
@@ -281,7 +287,7 @@ td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{backgro
   <main class="main">
     <section class="detailview" id="detailView">
       <div id="seoIntro" class="seo-intro">
-        <h1>H&amp;G Armory — Heroes &amp; Generals Weapon Stats</h1>
+        <h1>H&amp;G Armory - Heroes &amp; Generals Weapon Stats</h1>
         <p>H&amp;G Armory is a free weapon statistics database and comparison tool for the WWII shooter
         Heroes &amp; Generals. Every value is computed from the game's datamined values, covering
         damage and damage falloff, damage per second, hits to kill, time to kill, rate of fire, muzzle
@@ -352,6 +358,9 @@ const CATEGORIES = {
   4:"Equipment", 5:"AP Mines", 6:"AT Mines", 7:"AT Weapons", 8:"Rocket Launchers", 9:"Grenades",
 };
 const MOD_CATEGORIES = { 2:"Barrel", 3:"Bolt / Spring", 4:"Sight", 5:"Trigger" };
+// display order matching the in-game modification screen: Ammo (rendered first,
+// separately), then Sight, Trigger, Bolt/Spring, Barrel.
+const MOD_ORDER = [4,5,3,2];
 
 const HITBOX = [
   {id:"torso",label:"Torso",mult:1.00},{id:"head",label:"Head",mult:3.56},
@@ -605,7 +614,12 @@ function renderDetail(){
 
   const mb=$("#modBlocks"); mb.innerHTML=""; const cats={};
   (w.modifiers||[]).forEach(m=>{(cats[m.weaponModCategoryId] ??= []).push(m);});
-  Object.keys(cats).sort((a,b)=>a-b).forEach(cid=>{
+  // order to match the in-game modification screen; anything unrecognised falls in after
+  const ordered=Object.keys(cats).map(Number).sort((a,b)=>{
+    const ia=MOD_ORDER.indexOf(a), ib=MOD_ORDER.indexOf(b);
+    return (ia<0?99:ia)-(ib<0?99:ib) || a-b;
+  });
+  ordered.forEach(cid=>{
     const blk=el("div","cfg-sel"); blk.appendChild(el("label",null,MOD_CATEGORIES[cid]||("Mod "+cid)));
     const sel=el("select"); const none=el("option",null,"Stock"); none.value=""; sel.appendChild(none);
     cats[cid].forEach(m=>{const o=el("option",null,m.name);o.value=m.id;if(state.modIds.includes(m.id))o.selected=true;sel.appendChild(o);});
@@ -1090,7 +1104,12 @@ function columnConfig(idx,w,entry){
   asel.onchange=()=>{entry.ammoId=+asel.value;renderVersus();};
   box.appendChild(asel);
   const cats={}; (w.modifiers||[]).forEach(m=>{(cats[m.weaponModCategoryId] ??= []).push(m);});
-  Object.keys(cats).sort((a,b)=>a-b).forEach(cid=>{
+  // same in-game order as the data sheet: Sight, Trigger, Bolt/Spring, Barrel (ammo is above)
+  const ordered=Object.keys(cats).map(Number).sort((a,b)=>{
+    const ia=MOD_ORDER.indexOf(a), ib=MOD_ORDER.indexOf(b);
+    return (ia<0?99:ia)-(ib<0?99:ib) || a-b;
+  });
+  ordered.forEach(cid=>{
     const sel=el("select","vs-pick2");
     const none=el("option",null,(MOD_CATEGORIES[cid]||("Mod "+cid))+": Stock");none.value="";sel.appendChild(none);
     cats[cid].forEach(m=>{const o=el("option",null,m.name);o.value=m.id;if(entry.modIds.includes(m.id))o.selected=true;sel.appendChild(o);});
@@ -1212,43 +1231,78 @@ function renderVersus(){
     });
   });
   t.appendChild(tb);
-  const tw=el("div","vs-tablewrap"); tw.appendChild(t); host.appendChild(tw);
+  // table on the left, charts pinned to a sticky column on the right
+  const area=el("div","vs-area");
+  const tw=el("div","vs-tablewrap"); tw.appendChild(t); area.appendChild(tw);
 
-  const cgw=el("div","stat-group"); cgw.appendChild(el("h3",null,"Damage over distance"));
-  cgw.appendChild(versusChart(cols.map(c=>({name:c.w.name,color:c.color,s:c.s})))); host.appendChild(cgw);
+  const sers=cols.map(c=>({name:c.w.name,color:c.color,s:c.s}));
+  const charts=el("div","vs-charts");
+  charts.appendChild(el("div","curves-title","Combat curves"));
+  const box=el("div","chartwrap");
+  // one shared legend for both charts, like the Data Sheet's curves column
+  box.appendChild(el("div","chart-legend",
+    sers.map(x=>`<span class="k"><span class="sw" style="background:${x.color}"></span>${x.name}</span>`).join("")+
+    `<span class="k" style="color:var(--ink-faint)">vs distance · after ${state.vs.hitbox}${state.vs.heavyset!=="none"?" · HS "+state.vs.heavyset:""}</span>`));
+  const grid=el("div","mini-grid");
+  grid.appendChild(versusChart(sers,{mode:"damage",title:"Damage"}));
+  grid.appendChild(versusChart(sers,{mode:"ttk",title:"Time to kill (ms)"}));
+  box.appendChild(grid); charts.appendChild(box);
+  area.appendChild(charts);
+  host.appendChild(area);
 }
 
-function versusChart(series){
-  const W=560,H=200,pad={l:40,r:12,t:12,b:26}, iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
+function versusChart(series,opts={}){
+  const mode=opts.mode||"damage";
+  const hb=HITBOX.find(h=>h.id===state.vs.hitbox).mult, hs=HEAVYSET.find(h=>h.id===state.vs.heavyset).mult, mul=hb*hs;
+  // metric per series at distance d
+  const valAt=(s,d)=>{
+    if(mode==="damage")return dmgAtRange(s,d);
+    const per=dmgAtRange(s,d)*mul;
+    const htk=Math.max(1,Math.ceil(TARGET_HP/per));
+    return (htk-1)*(60/s.rpm)*1000; // ms
+  };
+  const W=396,H=214,pad={l:42,r:8,t:10,b:24}, iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
   const rawMaxD=Math.max(...series.map(x=>x.s.rFar))*1.4;
   const xStep=niceStep(Math.max(rawMaxD,60),6), maxD=Math.ceil(rawMaxD/xStep)*xStep;
-  const yStep=Math.max(10,niceStep(Math.max(...series.map(x=>x.s.dmgNear),10),5));
-  const yMax=Math.ceil(Math.max(...series.map(x=>x.s.dmgNear),1)/yStep)*yStep;
-  const X=d=>pad.l+(d/maxD)*iw, Y=v=>pad.t+ih-(v/yMax)*ih;
+  // peak across all series over the plotted range
+  let peak=0; series.forEach(x=>{for(let d=0;d<=maxD;d+=maxD/60)peak=Math.max(peak,valAt(x.s,d));});
+  const yStep=mode==="damage"?Math.max(10,niceStep(Math.max(peak,10),5)):niceStep(Math.max(peak,1),5);
+  const yMax=Math.max(yStep,Math.ceil(peak/yStep)*yStep);
+  const X=d=>pad.l+(d/maxD)*iw, Y=v=>pad.t+ih-(Math.min(v,yMax)/yMax)*ih;
   let grid="";
-  for(let v=0;v<=yMax+0.001;v+=yStep)grid+=`<line x1="${pad.l}" y1="${Y(v)}" x2="${W-pad.r}" y2="${Y(v)}" stroke="#ffffff10"/><text x="${pad.l-6}" y="${Y(v)+3}" fill="#6c6a56" font-size="10" text-anchor="end" font-family="JetBrains Mono">${v}</text>`;
-  for(let d=0;d<=maxD+0.001;d+=xStep)grid+=`<line x1="${X(d)}" y1="${pad.t}" x2="${X(d)}" y2="${pad.t+ih}" stroke="#ffffff08"/><text x="${X(d)}" y="${H-9}" fill="#6c6a56" font-size="10" text-anchor="middle" font-family="JetBrains Mono">${d}m</text>`;
-  const kill=Y(100)>pad.t?`<line x1="${pad.l}" y1="${Y(100)}" x2="${W-pad.r}" y2="${Y(100)}" stroke="#8a8770" stroke-dasharray="5 4"/>`:'';
-  const lines=series.map(x=>{let p=[];for(let d=0;d<=maxD;d+=maxD/160)p.push(`${X(d).toFixed(1)},${Y(dmgAtRange(x.s,d)).toFixed(1)}`);return `<polyline points="${p.join(' ')}" fill="none" stroke="${x.color}" stroke-width="2"/>`;}).join("");
-  const dots=series.map((x,i)=>`<circle id="vc${i}" r="3.5" fill="${x.color}" style="opacity:0"/>`).join("");
-  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">${grid}${kill}${lines}<line id="vcl" y1="${pad.t}" y2="${pad.t+ih}" stroke="#f4efdc" stroke-width="1" opacity="0"/>${dots}</svg>`;
+  for(let v=0;v<=yMax+0.001;v+=yStep)grid+=`<line x1="${pad.l}" y1="${Y(v)}" x2="${W-pad.r}" y2="${Y(v)}" stroke="#ffffff10"/><text x="${pad.l-5}" y="${Y(v)+4}" fill="#8a8770" font-size="12" text-anchor="end" font-family="JetBrains Mono">${v}</text>`;
+  for(let d=0;d<=maxD+0.001;d+=xStep)grid+=`<line x1="${X(d)}" y1="${pad.t}" x2="${X(d)}" y2="${pad.t+ih}" stroke="#ffffff08"/><text x="${X(d)}" y="${H-7}" fill="#8a8770" font-size="12" text-anchor="middle" font-family="JetBrains Mono">${d}</text>`;
+  const kill=(mode==="damage"&&Y(100)>pad.t)?`<line x1="${pad.l}" y1="${Y(100)}" x2="${W-pad.r}" y2="${Y(100)}" stroke="#8a8770" stroke-dasharray="5 4"/>`:'';
+  // TTK is a step function (whole hits), damage is continuous
+  const lines=series.map(x=>{
+    let p=[],prev=null;
+    for(let d=0;d<=maxD;d+=maxD/220){const v=valAt(x.s,d);
+      if(mode==="ttk"&&prev!==null&&v!==prev)p.push(`${X(d).toFixed(1)},${Y(prev).toFixed(1)}`);
+      p.push(`${X(d).toFixed(1)},${Y(v).toFixed(1)}`); prev=v;}
+    return `<polyline points="${p.join(' ')}" fill="none" stroke="${x.color}" stroke-width="2"/>`;
+  }).join("");
+  const uid=mode==="damage"?"d":"t";
+  const dots=series.map((x,i)=>`<circle id="vc${uid}${i}" r="3.5" fill="${x.color}" style="opacity:0"/>`).join("");
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">${grid}${kill}${lines}<line id="vcl${uid}" y1="${pad.t}" y2="${pad.t+ih}" stroke="#f4efdc" stroke-width="1" opacity="0"/>${dots}</svg>`;
 
-  const wrap=el("div","chartwrap vs-chart");
-  wrap.appendChild(el("div","chart-legend",series.map(x=>`<span class="k"><span class="sw" style="background:${x.color}"></span>${x.name}</span>`).join("")+`<span class="k" style="color:var(--ink-faint)">dashed = 100 hp</span>`));
-  const plot=el("div","dmg-plot"); plot.innerHTML=svg+'<div class="dmg-tip" id="vsTip"></div>'; wrap.appendChild(plot);
+  // rendered as a mini-chart panel so the Compare tab matches the Data Sheet's curves column
+  const wrap=el("div","mini-chart");
+  wrap.appendChild(el("div","mini-title",opts.title||(mode==="damage"?"Damage over distance":"Time to kill (ms)")));
+  const plot=el("div","dmg-plot"); plot.innerHTML=svg+`<div class="dmg-tip" id="vsTip${uid}"></div>`; wrap.appendChild(plot);
 
-  const svgEl=plot.querySelector("svg"), tip=plot.querySelector("#vsTip"), cl=plot.querySelector("#vcl");
+  const svgEl=plot.querySelector("svg"), tip=plot.querySelector("#vsTip"+uid), cl=plot.querySelector("#vcl"+uid);
   const move=ev=>{
     const rect=svgEl.getBoundingClientRect();
     const px=(ev.touches?ev.touches[0].clientX:ev.clientX)-rect.left, svgX=px/rect.width*W;
     let d=(svgX-pad.l)/iw*maxD; d=Math.max(0,Math.min(maxD,d));
     const vx=X(d); cl.setAttribute("x1",vx); cl.setAttribute("x2",vx); cl.setAttribute("opacity",".5");
     let rows="";
-    series.forEach((x,i)=>{const dm=dmgAtRange(x.s,d);const dot=plot.querySelector("#vc"+i);dot.setAttribute("cx",vx);dot.setAttribute("cy",Y(dm));dot.style.opacity=1;rows+=`<div style="color:${x.color}">${dm.toFixed(1)} — ${x.name}</div>`;});
+    series.forEach((x,i)=>{const v=valAt(x.s,d);const dot=plot.querySelector("#vc"+uid+i);dot.setAttribute("cx",vx);dot.setAttribute("cy",Y(v));dot.style.opacity=1;
+      rows+=`<div style="color:${x.color}">${mode==="damage"?v.toFixed(1):Math.round(v)+" ms"} — ${x.name}</div>`;});
     tip.style.opacity=1; tip.style.left=Math.min(rect.width-150,px+12)+"px";
     tip.innerHTML=`<b>${Math.round(d)} m</b>${rows}`;
   };
-  const leave=()=>{cl.setAttribute("opacity","0");series.forEach((x,i)=>plot.querySelector("#vc"+i).style.opacity=0);tip.style.opacity=0;};
+  const leave=()=>{cl.setAttribute("opacity","0");series.forEach((x,i)=>plot.querySelector("#vc"+uid+i).style.opacity=0);tip.style.opacity=0;};
   svgEl.addEventListener("mousemove",move); svgEl.addEventListener("mouseleave",leave);
   svgEl.addEventListener("touchmove",move,{passive:true}); svgEl.addEventListener("touchend",leave);
   return wrap;
