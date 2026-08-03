@@ -20,10 +20,10 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="H&amp;G Armory">
 <meta property="og:url" content="https://hng-armory.top/">
-<meta property="og:title" content="H&amp;G Armory - Heroes &amp; Generals Weapon Stats">
+<meta property="og:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon Stats">
 <meta property="og:description" content="Free Heroes &amp; Generals weapon stats: damage, DPS, time-to-kill, recoil, accuracy and armor penetration for every weapon, with attachments, ammo and badges. Compare any two or three weapons side by side.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="H&amp;G Armory - Heroes &amp; Generals Weapon Stats">
+<meta name="twitter:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon Stats">
 <meta name="twitter:description" content="Free Heroes &amp; Generals weapon stats and comparison tool: damage, DPS, TTK, recoil, accuracy, armor penetration.">
 
 <script type="application/ld+json">
@@ -137,6 +137,11 @@ a{color:var(--brass)}
 .stat-group.sec-closed .sec-body{display:none}
 .grid{display:flex;flex-wrap:wrap;gap:6px}
 .cell{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px;flex:1 1 118px;min-width:118px}
+.cell-n{flex:1 1 92px;min-width:92px}
+.cr{color:#c3ccd4;white-space:nowrap}
+.gd{color:#e7c15a;white-space:nowrap}
+.cr small,.gd small{color:inherit}
+.cell-w{flex:2 1 150px;min-width:150px}
 .cell .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cell .v{font-family:"JetBrains Mono";font-size:16px;font-weight:500;margin-top:2px}
 .cell .v small{font-size:10px;color:var(--ink-dim);font-weight:400}
@@ -231,7 +236,16 @@ a{color:var(--brass)}
 .vs-win{background:#c9a24b1a;color:var(--brass) !important}
 .vs-win small{color:var(--brass) !important;opacity:.7}
 .vs-pickers{max-width:640px}
-.vs-presets{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 18px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);max-width:900px}
+.vs-presetwrap{max-width:900px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:0 0 18px;overflow:hidden}
+.vs-presethead{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;cursor:pointer;user-select:none;font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--brass)}
+.vs-presethead .cur{transition:transform .12s;font-size:10px}
+.vs-presetwrap.closed .cur{transform:rotate(-90deg)}
+.vs-presetwrap.closed .vs-presets{display:none}
+.vs-presets{display:flex;flex-wrap:wrap;gap:14px;padding:4px 14px 14px}
+.vs-grouprow .vs-grouplbl{cursor:pointer;user-select:none}
+.vs-grouprow .cur{display:inline-block;font-size:9px;transition:transform .12s;color:var(--brass)}
+.vs-grouprow.closed .cur{transform:rotate(-90deg)}
+.vs-grouprow:hover .vs-grouplbl{color:var(--ink)}
 .vs-preset{display:flex;flex-direction:column;gap:4px}
 .vs-preset>label{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--ink-faint)}
 .vs-preset .seg{gap:3px}
@@ -287,7 +301,7 @@ td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{backgro
   <main class="main">
     <section class="detailview" id="detailView">
       <div id="seoIntro" class="seo-intro">
-        <h1>H&amp;G Armory - Heroes &amp; Generals Weapon Stats</h1>
+        <h1>H&amp;G Armory — Heroes &amp; Generals Weapon Stats</h1>
         <p>H&amp;G Armory is a free weapon statistics database and comparison tool for the WWII shooter
         Heroes &amp; Generals. Every value is computed from the game's datamined values, covering
         damage and damage falloff, damage per second, hits to kill, time to kill, rate of fire, muzzle
@@ -442,8 +456,11 @@ function compute(w, cfg){
 
   const dpsNear = dmgNear * rpm/60, dpsFar = dmgFar * rpm/60;
 
-  const hb = HITBOX.find(h=>h.id===cfg.hitbox).mult, hs = HEAVYSET.find(h=>h.id===cfg.heavyset).mult;
+  const hb = HITBOX.find(h=>h.id===cfg.hitbox).mult, hsRaw = HEAVYSET.find(h=>h.id===cfg.heavyset).mult;
+  const hs = cfg.hitbox==="head" ? 1 : hsRaw; // headshots bypass Heavy Set
   const perNear = dmgNear*hb*hs, perFar = dmgFar*hb*hs;
+  // effective per-hit damage & dps against the selected hit location + Heavy Set
+  const effNear=perNear, effFar=perFar, effDpsNear=perNear*rpm/60, effDpsFar=perFar*rpm/60;
   const htkNear = Math.max(1,Math.ceil(TARGET_HP/perNear));
   const htkFar  = Math.max(1,Math.ceil(TARGET_HP/perFar));
   const ttkNear = (htkNear-1)*(60/rpm)*1000, ttkFar = (htkFar-1)*(60/rpm)*1000;
@@ -475,7 +492,7 @@ function compute(w, cfg){
   const buyG = w.purchaseCostGold    + (isDefaultAmmo(w,ammo)?0:(ammo.purchaseCostGold||0))    + mods.reduce((s,m)=>s+(m.purchaseCostGold||0),0);
 
   return {ammo,mods,rpm,velocity,dmgNear,dmgFar,rNear,rFar,rMax,cone,
-    recoilUp,recoilRight,recoilVar,sway,swayspeed:w.swayspeed,dpsNear,dpsFar,htkNear,htkFar,ttkNear,ttkFar,
+    recoilUp,recoilRight,recoilVar,sway,swayspeed:w.swayspeed,dpsNear,dpsFar,effNear,effFar,effDpsNear,effDpsFar,htkNear,htkFar,ttkNear,ttkFar,
     equiptime:w.equiptime,swayFatigue:w.swayfatigue,bloom:w.aimpenaltyperbullet,turnPenalty:w.aimpenaltyturn,coneRecovery:w.aimpenaltycontractionpersec,
     armorMin,armorMax,penMin,penMax,penFarMin,penFarMax,armorDPS,
     penNearRange:ammo.armorPenetrationNearRange,penFarRange:ammo.armorPenetrationFarRange,
@@ -494,13 +511,17 @@ function dmgAtRange(s,d){
 const $=(s,r=document)=>r.querySelector(s);
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
 const fmt=(n,d=0)=>Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+// currency numbers coloured to match the in-game currencies (silver credits, gold)
+const cr=n=>`<span class="cr">${n} cr</span>`;
+const gd=n=>`<span class="gd">${n} g</span>`;
 
 let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand",
            versus:[{wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[]},
                    {wid:(WEAPONS[1]||WEAPONS[0]).id,ammoId:(WEAPONS[1]||WEAPONS[0]).defaultAmmo.id,modIds:[]},null],
            spreadRange:100,view:"detail",sort:{key:"name",dir:1},open:{fac:{},cat:{}},secClosed:{},
            cfgOpen:{hitbox:true,heavyset:false,reload:false,ironfist:false,grenadier:false,stance:false},
-           vs:{hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"}};
+           vs:{hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"},
+           vsBarClosed:false,vsGroupClosed:{}};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
 let lastTarget="soldier"; // spread target: soldier (guns) or tank (AT weapons)
 let lastRecoil=true; // whether the recoil pane is shown
@@ -652,7 +673,7 @@ function renderDetail(){
 }
 
 function cell(k,v,unit,opts={}){
-  const c=el("div","cell"+(opts.hot?" hot":"")+(opts.kill?" kill":""));
+  const c=el("div","cell"+(opts.hot?" hot":"")+(opts.kill?" kill":"")+(opts.w?" cell-"+opts.w:""));
   c.appendChild(el("div","k",k));
   const val=el("div","v"); val.innerHTML=v+(unit?` <small>${unit}</small>`:"");
   if(opts.delta!=null && Math.abs(opts.delta)>0.0005){
@@ -710,24 +731,24 @@ function renderGun(R,s,b){
   // cells within each section grow to fill their row.
   const flow=el("div","stat-flow");
   flow.appendChild(group("Damage",[
-    cell("Rate of fire",fmt(s.rpm),"rpm",{hot:true,delta:s.rpm-b.rpm,betterWhenUp:true}),
-    cell("Magazine",s.mag,"rds",{}),
-    cell("Reload",fmt(s.reload,2),"s",{delta:s.reload-b.reload,dd:2,betterWhenUp:false}),
-    cell("Damage",fmt(s.dmgNear)+" → "+fmt(s.dmgFar),"hp",{hot:true,delta:s.dmgNear-b.dmgNear,betterWhenUp:true}),
-    cell("Damage / s",fmt(s.dpsNear)+" → "+fmt(s.dpsFar),"hp/s",{hot:true}),
-    cell("Hits to kill",s.htkNear+" → "+s.htkFar,"",{kill:true}),
-    cell("Time to kill",fmt(s.ttkNear)+" → "+fmt(s.ttkFar),"ms",{kill:true}),
-    cell("Muzzle velocity",fmt(s.velocity),"m/s",{}),
-    cell("Range",fmt(s.rNear,0)+" → "+fmt(s.rFar,0),"m",{}),
-    cell("Max range",fmt(s.rMax),"m",{}),
-    cell("Mags carried",s.mags,"",{}),
+    cell("Rate of fire",fmt(s.rpm),"rpm",{hot:true,delta:s.rpm-b.rpm,betterWhenUp:true,w:"n"}),
+    cell("Reload",fmt(s.reload,2),"s",{delta:s.reload-b.reload,dd:2,betterWhenUp:false,w:"n"}),
+    cell("Magazine",s.mag,"rds",{w:"n"}),
+    cell("Mags carried",s.mags,"",{w:"n"}),
+    cell("Effective ("+state.hitbox+(state.heavyset!=="none"?" · HS "+state.heavyset:"")+")",fmt(s.effNear,0)+" → "+fmt(s.effFar,0),"hp",{hot:true,delta:s.effNear-b.effNear,dd:0,betterWhenUp:true,w:"w"}),
+    cell("Damage / s",fmt(s.dpsNear)+" → "+fmt(s.dpsFar),"hp/s",{hot:true,w:"w"}),
+    cell("Hits to kill",s.htkNear+" → "+s.htkFar,"",{kill:true,w:"n"}),
+    cell("Time to kill",fmt(s.ttkNear)+" → "+fmt(s.ttkFar),"ms",{kill:true,w:"w"}),
+    cell("Range",fmt(s.rNear,0)+" → "+fmt(s.rFar,0),"m",{w:"w"}),
+    cell("Max range",fmt(s.rMax),"m",{w:"n"}),
+    cell("Muzzle velocity",fmt(s.velocity),"m/s",{w:"n"}),
   ]));
   flow.appendChild(group("Armor",[
-    cell("Armor damage",fmt(s.armorMin)+"–"+fmt(s.armorMax),"hp",{}),
-    cell("Armor DPS",fmt(s.armorDPS),"hp/s",{}),
-    cell("Armor pen",fmt(s.penMin,1)+"–"+fmt(s.penMax,1),"mm",{}),
-    cell("Armor pen · far",fmt(s.penFarMin,1)+"–"+fmt(s.penFarMax,1),"mm",{}),
-    cell("Pen range",fmt(s.penNearRange)+"–"+fmt(s.penFarRange),"m",{}),
+    cell("Armor damage",fmt(s.armorMin)+"–"+fmt(s.armorMax),"hp",{w:"w"}),
+    cell("Armor DPS",fmt(s.armorDPS),"hp/s",{w:"n"}),
+    cell("Armor pen · near",fmt(s.penMin,1)+"–"+fmt(s.penMax,1),"mm",{w:"w"}),
+    cell("Armor pen · far",fmt(s.penFarMin,1)+"–"+fmt(s.penFarMax,1),"mm",{w:"w"}),
+    cell("Pen range",fmt(s.penNearRange)+"–"+fmt(s.penFarRange),"m",{w:"n"}),
   ]));
   flow.appendChild(group("Handling",[
     cell("Cone of fire",fmt(s.cone,3),"°",{hot:true,delta:s.cone-b.cone,dd:3,betterWhenUp:false}),
@@ -742,9 +763,9 @@ function renderGun(R,s,b){
     cell("Equip time",fmt(s.equiptime,2),"s",{}),
   ]));
   flow.appendChild(group("Economy",[
-    cell("Cost / shot",fmt(s.costPerShot,2),"cr · "+fmt(s.costPerShotG,4)+" g",{}),
-    cell("Cost / mag",fmt(s.costPerMag,2),"cr · "+fmt(s.costPerMagG,4)+" g",{}),
-    cell("Cost to buy",fmt(s.buy),"cr · "+fmt(s.buyG)+" g",{}),
+    cell("Cost / shot",cr(fmt(s.costPerShot,2))+" "+gd(fmt(s.costPerShotG,4)),"",{}),
+    cell("Cost / mag",cr(fmt(s.costPerMag,2))+" "+gd(fmt(s.costPerMagG,4)),"",{}),
+    cell("Cost to buy",cr(fmt(s.buy))+" "+gd(fmt(s.buyG)),"",{}),
     cell("Equipment pts",s.ep,"",{}),
   ]));
   R.appendChild(flow);
@@ -807,8 +828,8 @@ function renderExplosive(R,w){
   ].filter(Boolean)));
 
   flow.appendChild(group("Economy",[
-    (costUse>0)?cell("Cost / use",fmt(costUse,2),"cr · "+fmt(costUseG,4)+" g",{}):null,
-    w.purchaseCostCredits?cell("Cost to buy",fmt(w.purchaseCostCredits),"cr · "+fmt(w.purchaseCostGold)+" g",{}):cell("Cost to buy","Free",""),
+    (costUse>0)?cell("Cost / use",cr(fmt(costUse,2))+" "+gd(fmt(costUseG,4)),"",{}):null,
+    w.purchaseCostCredits?cell("Cost to buy",cr(fmt(w.purchaseCostCredits))+" "+gd(fmt(w.purchaseCostGold)),"",{}):cell("Cost to buy","Free",""),
   ].filter(Boolean)));
   R.appendChild(flow);
 
@@ -843,8 +864,8 @@ function renderEquipment(R,w){
     cell("Equipment pts",w.equipmentPointsCost,""),
   ].filter(Boolean)));
   R.appendChild(group("Economy",[
-    (costUse>0)?cell("Cost / use",fmt(costUse,2),"cr · "+fmt(costUseG,4)+" g",{}):null,
-    w.purchaseCostCredits?cell("Cost to buy",fmt(w.purchaseCostCredits),"cr · "+fmt(w.purchaseCostGold)+" g",{}):cell("Cost to buy","Free",""),
+    (costUse>0)?cell("Cost / use",cr(fmt(costUse,2))+" "+gd(fmt(costUseG,4)),"",{}):null,
+    w.purchaseCostCredits?cell("Cost to buy",cr(fmt(w.purchaseCostCredits))+" "+gd(fmt(w.purchaseCostGold)),"",{}):cell("Cost to buy","Free",""),
   ].filter(Boolean)));
 }
 const coneRadius=(deg,d)=> d*Math.tan((deg/2)*Math.PI/180); // ± metres at distance d
@@ -987,7 +1008,7 @@ function metricChart(s,opts){
 
 // the 2x2 combat curves (damage / dps / htk / ttk over distance, after hitbox+HS)
 function combatGraphs(s){
-  const hb=HITBOX.find(h=>h.id===state.hitbox).mult, hs=HEAVYSET.find(h=>h.id===state.heavyset).mult, mul=hb*hs;
+  const hb=HITBOX.find(h=>h.id===state.hitbox).mult, hs=state.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.heavyset).mult, mul=hb*hs;
   const dmg=d=>dmgAtRange(s,d)*mul;
   const htk=d=>Math.max(1,Math.ceil(TARGET_HP/(dmgAtRange(s,d)*mul)));
   const ttk=d=>(htk(d)-1)*(60/s.rpm)*1000;
@@ -1136,38 +1157,51 @@ const VS_GROUPS=[
   ]},
   {title:"Damage",rows:[
     {label:"Rate of fire",unit:"rpm",better:"up",get:(w,s)=>s.rpm,dd:0},
-    {label:"Damage",unit:"hp",better:"up",get:(w,s)=>s.dmgNear,dd:0,disp:(w,s)=>fmt(s.dmgNear)+" → "+fmt(s.dmgFar)},
+    {label:"Effective dmg",unit:"hp",better:"up",get:(w,s)=>s.effNear,dd:0,disp:(w,s)=>fmt(s.effNear,0)+" → "+fmt(s.effFar,0)},
     {label:"Damage / s",unit:"hp/s",better:"up",get:(w,s)=>s.dpsNear,dd:0,disp:(w,s)=>fmt(s.dpsNear)+" → "+fmt(s.dpsFar)},
     {label:"Hits to kill",better:"down",get:(w,s)=>s.htkNear,dd:0,disp:(w,s)=>s.htkNear+" → "+s.htkFar},
     {label:"Time to kill",unit:"ms",better:"down",get:(w,s)=>s.ttkNear,dd:0,disp:(w,s)=>fmt(s.ttkNear)+" → "+fmt(s.ttkFar)},
     {label:"Magazine",unit:"rds",better:"up",get:(w,s)=>s.mag,dd:0},
+    {label:"Mags carried",better:"up",get:(w,s)=>s.mags,dd:0},
     {label:"Reload",unit:"s",better:"down",get:(w,s)=>s.reload,dd:2},
+    {label:"Range",unit:"m",better:"up",get:(w,s)=>s.rNear,dd:0,disp:(w,s)=>fmt(s.rNear,0)+" → "+fmt(s.rFar,0)},
+    {label:"Max range",unit:"m",better:"up",get:(w,s)=>s.rMax,dd:0},
+    {label:"Muzzle velocity",unit:"m/s",better:"up",get:(w,s)=>s.velocity,dd:0},
   ]},
   {title:"Armor",rows:[
     {label:"Armor damage",unit:"hp",better:"up",get:(w,s)=>(s.armorMin+s.armorMax)/2,dd:0,disp:(w,s)=>fmt(s.armorMin)+"–"+fmt(s.armorMax)},
     {label:"Armor DPS",unit:"hp/s",better:"up",get:(w,s)=>s.armorDPS,dd:0},
-    {label:"Armor pen",unit:"mm",better:"up",get:(w,s)=>(s.penMin+s.penMax)/2,dd:1,disp:(w,s)=>fmt(s.penMin,1)+"–"+fmt(s.penMax,1)},
+    {label:"Armor pen · near",unit:"mm",better:"up",get:(w,s)=>(s.penMin+s.penMax)/2,dd:1,disp:(w,s)=>fmt(s.penMin,1)+"–"+fmt(s.penMax,1)},
+    {label:"Armor pen · far",unit:"mm",better:"up",get:(w,s)=>(s.penFarMin+s.penFarMax)/2,dd:1,disp:(w,s)=>fmt(s.penFarMin,1)+"–"+fmt(s.penFarMax,1)},
+    {label:"Pen range",unit:"m",better:"up",get:(w,s)=>s.penFarRange,dd:0,disp:(w,s)=>fmt(s.penNearRange)+"–"+fmt(s.penFarRange)},
   ]},
-  {title:"Range & handling",rows:[
-    {label:"Range",unit:"m",better:"up",get:(w,s)=>s.rNear,dd:0,disp:(w,s)=>fmt(s.rNear,0)+" → "+fmt(s.rFar,0)},
-    {label:"Muzzle velocity",unit:"m/s",better:"up",get:(w,s)=>s.velocity,dd:0},
+  {title:"Handling",rows:[
     {label:"Cone of fire",unit:"°",better:"down",get:(w,s)=>s.cone,dd:3},
     {label:"Recoil ↑ / ↔",better:"down",get:(w,s)=>s.recoilUp,dd:3,disp:(w,s)=>fmt(s.recoilUp,3)+" / "+fmt(s.recoilRight,3)},
-    {label:"Equip time",unit:"s",better:"down",get:(w,s)=>s.equiptime,dd:2},
+    {label:"Recoil spread",better:"down",get:(w,s)=>s.recoilVar,dd:3},
+    {label:"Cone bloom / shot",better:"down",get:(w,s)=>s.bloom,dd:2},
+    {label:"Sway",better:"down",get:(w,s)=>s.sway,dd:2},
+    {label:"Sway speed",better:"down",get:(w,s)=>s.swayspeed,dd:2},
     {label:"Sway fatigue",better:"down",get:(w,s)=>s.swayFatigue,dd:2},
     {label:"Turn penalty",better:"down",get:(w,s)=>s.turnPenalty,dd:2},
+    {label:"Equip time",unit:"s",better:"down",get:(w,s)=>s.equiptime,dd:2},
   ]},
   {title:"Economy",rows:[
+    {label:"Cost / shot",better:"down",get:(w,s)=>s.costPerShot,dd:2,disp:(w,s)=>cr(fmt(s.costPerShot,2))},
+    {label:"Cost / mag",better:"down",get:(w,s)=>s.costPerMag,dd:2,disp:(w,s)=>cr(fmt(s.costPerMag,2))},
+    {label:"Cost to buy",better:"down",get:(w,s)=>s.buy,dd:0,disp:(w,s)=>cr(fmt(s.buy))},
     {label:"Equip pts",better:"down",get:(w,s)=>s.ep,dd:0},
-    {label:"Cost / shot",unit:"cr",better:"down",get:(w,s)=>s.costPerShot,dd:2},
-    {label:"Cost to buy",unit:"cr",better:"down",get:(w,s)=>s.buy,dd:0},
   ]},
 ];
 
 function renderVersus(){
   const host=$("#versusView"); host.innerHTML="";
 
-  // 1) shared scenario badges at the top
+  // 1) shared scenario badges — always-visible header, collapsible body
+  const barWrap=el("div","vs-presetwrap"+(state.vsBarClosed?" closed":""));
+  const barHead=el("div","vs-presethead",'<span>Scenario &amp; badges</span><span class="cur">▾</span>');
+  barHead.onclick=()=>{state.vsBarClosed=!state.vsBarClosed;renderVersus();};
+  barWrap.appendChild(barHead);
   const bar=el("div","vs-presets");
   const addSeg=(lbl,items,cur,set)=>{const b=el("div","vs-preset");b.appendChild(el("label",null,lbl));const sg=el("div","seg");b.appendChild(sg);seg(sg,items,cur,id=>{set(id);renderVersus();});bar.appendChild(b);};
   addSeg("Hit location",HITBOX,state.vs.hitbox,id=>state.vs.hitbox=id);
@@ -1176,7 +1210,7 @@ function renderVersus(){
   addSeg("Inf / Iron Fist",IRONFIST,state.vs.ironFist,id=>state.vs.ironFist=id);
   addSeg("Grenadier",GRENADIER,state.vs.grenadier,id=>state.vs.grenadier=id);
   addSeg("Stance",STANCES,state.vs.stance,id=>state.vs.stance=id);
-  host.appendChild(bar);
+  barWrap.appendChild(bar); host.appendChild(barWrap);
 
   const cols=state.versus.map((entry,i)=>{
     if(!entry)return null; const w=WEAPONS.find(x=>x.id===entry.wid); if(!w)return null;
@@ -1210,11 +1244,16 @@ function renderVersus(){
     return;
   }
 
-  // 3) grouped stat rows
+  // 3) grouped stat rows — each section header collapses/expands its rows
   const tb=el("tbody");
   VS_GROUPS.forEach(g=>{
-    const gtr=el("tr","vs-grouprow");
-    const gtd=el("td","vs-grouplbl",g.title); gtd.colSpan=1+cols.length; gtr.appendChild(gtd); tb.appendChild(gtr);
+    const closed=state.vsGroupClosed[g.title]===true;
+    const gtr=el("tr","vs-grouprow"+(closed?" closed":""));
+    const gtd=el("td","vs-grouplbl"); gtd.colSpan=1+cols.length;
+    gtd.innerHTML=`<span class="cur">▾</span> ${g.title}`;
+    gtr.appendChild(gtd); tb.appendChild(gtr);
+    gtr.onclick=()=>{state.vsGroupClosed[g.title]=!closed;renderVersus();};
+    if(closed)return; // header only
     g.rows.forEach(row=>{
       const tr=el("tr"); tr.appendChild(el("td","vs-lbl",row.label));
       let best=null;
@@ -1253,7 +1292,7 @@ function renderVersus(){
 
 function versusChart(series,opts={}){
   const mode=opts.mode||"damage";
-  const hb=HITBOX.find(h=>h.id===state.vs.hitbox).mult, hs=HEAVYSET.find(h=>h.id===state.vs.heavyset).mult, mul=hb*hs;
+  const hb=HITBOX.find(h=>h.id===state.vs.hitbox).mult, hs=state.vs.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.vs.heavyset).mult, mul=hb*hs;
   // metric per series at distance d
   const valAt=(s,d)=>{
     if(mode==="damage")return dmgAtRange(s,d);
