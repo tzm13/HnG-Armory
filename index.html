@@ -45,6 +45,22 @@
   --brass:#c9a24b; --brass-dim:#8f7332; --danger:#c85a3f; --good:#8aa34b;
   --f-us:#a8b061; --f-ger:#7f95a3; --f-sov:#c05a45; --radius:3px;
 }
+/* vehicle mode: cool steel-blue palette to signal the switch from infantry */
+body.veh{
+  --bg:#101519; --panel:#172029; --panel-2:#1d2831; --line:#2f3d47;
+  --ink:#d3dde3; --ink-dim:#8ba0ac; --ink-faint:#5f7079;
+  --brass:#5fa8d0; --brass-dim:#356b86; --danger:#d06a4a; --good:#5fb0a0;
+}
+.modeswitch{display:flex;border:1px solid var(--brass-dim);border-radius:var(--radius);overflow:hidden;margin-right:6px}
+.modeswitch button{background:transparent;color:var(--ink-dim);border:none;padding:6px 14px;cursor:pointer;
+  font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:12px;transition:.12s}
+.modeswitch button:hover{color:var(--ink)}
+.modeswitch button.on{background:var(--brass);color:#12140d}
+.hidden-veh{display:none !important}
+.veh-cfg{margin:0 0 14px}
+.veh-cfg .cfg-sel{max-width:320px}
+.wrapseg{flex-wrap:wrap}
+.wrapseg button{white-space:nowrap}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font-family:"Barlow Semi Condensed",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
@@ -110,6 +126,7 @@ a{color:var(--brass)}
 .badge.faction{border-color:currentColor}
 
 .layout{display:grid;grid-template-columns:300px 1fr;gap:24px}
+body.veh .layout{grid-template-columns:1fr}
 @media(max-width:1000px){.layout{grid-template-columns:1fr}}
 .config .block{margin-bottom:18px}
 .cfg-selects{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;margin-bottom:12px}
@@ -276,9 +293,12 @@ td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{backgro
 <div class="app">
   <div class="topbar">
     <div class="brand"><span class="stencil">H&amp;G Armory</span><span class="tag">by zewm</span></div>
+    <div class="modeswitch" id="modeSwitch">
+      <button data-mode="inf" class="on">Infantry</button><button data-mode="veh">Vehicles</button>
+    </div>
     <div class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-view="detail">Data Sheet</button>
-      <button role="tab" aria-selected="false" data-view="table">Weapon List</button>
+      <button role="tab" aria-selected="false" data-view="table" id="tabTable">Weapon List</button>
       <button role="tab" aria-selected="false" data-view="versus">Compare</button>
     </div>
     <span class="build mono" id="buildTag"></span>
@@ -350,6 +370,7 @@ td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{backgro
 </div>
 
 <script src="weapons.js"></script>
+<script src="vehicles.js"></script>
 <script>
 /* ============================================================================
    1) LOOKUP MAPS  — edit as you confirm IDs.
@@ -521,7 +542,9 @@ let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"
            spreadRange:100,view:"detail",sort:{key:"name",dir:1},open:{fac:{},cat:{}},secClosed:{},
            cfgOpen:{hitbox:true,heavyset:false,reload:false,ironfist:false,grenadier:false,stance:false},
            vs:{hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"},
-           vsBarClosed:false,vsGroupClosed:{}};
+           vsBarClosed:false,vsGroupClosed:{},
+           mode:"inf",vid:(typeof VEHICLES!=="undefined"?VEHICLES[0].id:null),vweap:0,vAmmoId:null,vModIds:[],
+           vhitbox:"torso",vheavyset:"none",vopen:{}};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
 let lastTarget="soldier"; // spread target: soldier (guns) or tank (AT weapons)
 let lastRecoil=true; // whether the recoil pane is shown
@@ -555,6 +578,7 @@ function ensureVisible(id){                 // auto-open the group holding the s
 }
 
 function buildSidebar(filter=""){
+  if(state.mode==="veh") return buildVehicleSidebar(filter);
   const list=$("#wpnList"); list.innerHTML="";
   const f=filter.trim().toLowerCase(), searching=!!f;
   const shown=WEAPONS.filter(w=>!f||w.name.toLowerCase().includes(f));
@@ -618,6 +642,8 @@ function seg(container,items,current,onPick){
 }
 
 function renderDetail(){
+  if(state.mode==="veh") return renderVehicleDetail();
+  $(".config")?.classList.remove("hidden-veh");
   const w=curWeapon(), fac=FACTIONS[w.factiontemplateid]||{name:"?",color:"#888"};
   $("#wName").textContent=w.name;
   const meta=$("#wMeta"); meta.innerHTML="";
@@ -1347,16 +1373,158 @@ function versusChart(series,opts={}){
   return wrap;
 }
 
+/* ============================================================================
+   VEHICLE MODE
+   ========================================================================== */
+const curVehicle=()=>VEHICLES.find(v=>v.id===state.vid)||VEHICLES[0];
+// list a vehicle's weapons as [{label, w}] — main gun first, then aux
+function vehWeapons(v){
+  const out=[];
+  if(v.mainWeapon && (v.mainWeapon.defaultAmmo||v.mainWeapon.ammunition)) out.push({label:"Main — "+v.mainWeapon.name,w:v.mainWeapon});
+  (v.auxWeapons||[]).forEach((a,i)=>{ if(a&&(a.defaultAmmo||a.ammunition)) out.push({label:(v.mainWeapon?"Aux — ":"")+a.name,w:a}); });
+  return out;
+}
+function curVehWeapon(){ const ws=vehWeapons(curVehicle()); return ws[Math.min(state.vweap,ws.length-1)]; }
+
+function applyMode(m){
+  if(state.mode===m) return;
+  state.mode=m;
+  document.body.classList.toggle("veh",m==="veh");
+  document.querySelectorAll(".modeswitch button").forEach(b=>b.classList.toggle("on",b.dataset.mode===m));
+  $("#search").placeholder = m==="veh" ? "search vehicle…" : "search weapon…";
+  $("#tabTable").textContent = m==="veh" ? "Vehicle List" : "Weapon List";
+  if(m==="veh" && !state.vAmmoId){ const ws=vehWeapons(curVehicle()); if(ws.length){state.vweap=0;state.vAmmoId=ws[0].w.defaultAmmo.id;} }
+  state.view="detail"; buildSidebar($("#search").value); syncTabs();
+}
+
+function selectVehicle(id){
+  state.vid=id; state.vweap=0; state.vModIds=[];
+  const ws=vehWeapons(curVehicle()); state.vAmmoId = ws.length?ws[0].w.defaultAmmo.id:null;
+  renderVehicleDetail();
+  document.querySelectorAll("#wpnList .wpn-item").forEach(it=>it.setAttribute("aria-current",it.dataset.vid==id));
+}
+
+function buildVehicleSidebar(filter=""){
+  const host=$("#wpnList"); host.innerHTML=""; const f=filter.trim().toLowerCase(), searching=!!f;
+  VEHICLE_CATEGORY_ORDER.forEach(cat=>{
+    let items=VEHICLES.filter(v=>v.category===cat);
+    if(f) items=items.filter(v=>v.name.toLowerCase().includes(f));
+    if(!items.length) return;
+    const open = searching ? true : (state.vopen[cat]!==false);
+    const ch=el("div","cat-head"+(open?"":" closed"),`<span class="tw">▾</span>${cat} <span class="cnt">${items.length}</span>`);
+    ch.onclick=()=>{state.vopen[cat]=!(state.vopen[cat]!==false);buildVehicleSidebar($("#search").value);};
+    host.appendChild(ch);
+    if(!open) return;
+    items.sort((a,b)=>a.factiontemplateid-b.factiontemplateid||a.name.localeCompare(b.name)).forEach(v=>{
+      const fac=FACTIONS[v.factiontemplateid]||{color:"#888"};
+      const it=el("div","wpn-item",`<span><span class="faction-dot" style="background:${fac.color}"></span>${v.name}</span>`);
+      it.dataset.vid=v.id; it.setAttribute("aria-current",v.id===state.vid);
+      it.onclick=()=>selectVehicle(v.id); host.appendChild(it);
+    });
+  });
+}
+
+function renderVehicleDetail(){
+  const v=curVehicle(), fac=FACTIONS[v.factiontemplateid]||{name:"?",color:"#888"};
+  $("#wName").textContent=v.name;
+  const meta=$("#wMeta"); meta.innerHTML="";
+  const fb=el("span","badge faction",fac.name); fb.style.color=fac.color; meta.appendChild(fb);
+  meta.appendChild(el("span","badge",v.category));
+  const ws=vehWeapons(v);
+  meta.appendChild(el("span","badge",ws.length?ws.length+(ws.length>1?" weapons":" weapon"):"unarmed"));
+
+  const R=$("#readouts"); R.innerHTML=""; const C=$("#curvesCol"); if(C)C.innerHTML="";
+  $(".config")?.classList.add("hidden-veh"); // hide the infantry config panel in vehicle mode
+
+  // --- vehicle stats ---
+  const arm=v.hitPoints&&v.armorHPMul?v.hitPoints*v.armorHPMul:0;
+  R.appendChild(group("Vehicle",[
+    v.hitPoints?cell("Hit points",fmt(v.hitPoints),"hp",{hot:true,w:"n"}):null,
+    v.armorHPMul?cell("Armor mult",fmt(v.armorHPMul,0),"×",{w:"n"}):null,
+    arm?cell("Effective armor",fmt(arm),"hp",{hot:true,w:"w"}):null,
+    v.speed?cell("Top speed",fmt(v.speed),"km/h",{w:"n"}):null,
+    v.speedOffRoadKph?cell("Off-road",fmt(v.speedOffRoadKph),"km/h",{w:"n"}):null,
+    v.reverseSpeedKPH?cell("Reverse",fmt(v.reverseSpeedKPH),"km/h",{w:"n"}):null,
+    v.mass?cell("Mass",fmt(v.mass/1000,1),"t",{w:"n"}):null,
+    v.fuelCapacity?cell("Fuel",fmt(v.fuelCapacity),"L",{w:"n"}):null,
+    v.deployPoolCost?cell("Deploy pool",fmt(v.deployPoolCost),"",{w:"n"}):null,
+    v.purchaseCostCredits?cell("Cost to buy",cr(fmt(v.purchaseCostCredits))+" "+gd(fmt(v.purchaseCostGold||0)),"",{w:"w"}):null,
+  ].filter(Boolean)));
+
+  if(!ws.length){ R.appendChild(el("div","hint","This vehicle has no armament.")); return; }
+
+  // --- weapon selector ---
+  const wsec=el("div","stat-group"); wsec.appendChild(el("h3",null,"Armament"));
+  const wseg=el("div","seg wrapseg");
+  ws.forEach((x,i)=>{const b=el("button",(i===state.vweap?"on":""),x.label);b.onclick=()=>{state.vweap=i;state.vAmmoId=x.w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();};wseg.appendChild(b);});
+  wsec.appendChild(wseg); R.appendChild(wsec);
+
+  const vw=ws[Math.min(state.vweap,ws.length-1)].w;
+  if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
+  // ammo + mods + anti-infantry target selectors
+  const cfgbar=el("div","veh-cfg");
+  const ammoWrap=el("div","cfg-sel"); ammoWrap.appendChild(el("label",null,"Ammunition"));
+  const asel=el("select");[vw.defaultAmmo,...(vw.ammunition||[])].forEach((a,i)=>{const o=el("option",null,a.name+(i===0?" (default)":""));o.value=a.id;if(a.id===state.vAmmoId)o.selected=true;asel.appendChild(o);});
+  asel.onchange=()=>{state.vAmmoId=+asel.value;renderVehicleDetail();}; ammoWrap.appendChild(asel); cfgbar.appendChild(ammoWrap);
+  R.appendChild(cfgbar);
+
+  const cfg={ammoId:state.vAmmoId,modIds:state.vModIds,hitbox:state.vhitbox,heavyset:state.vheavyset,fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"};
+  const s=compute(vw,cfg), a=s.ammo;
+  const b=compute(vw,{...cfg,ammoId:vw.defaultAmmo.id,modIds:[]});
+
+  // --- anti-infantry ---
+  R.appendChild(group("Anti-infantry",[
+    cell("Rate of fire",fmt(s.rpm),"rpm",{hot:true,w:"n"}),
+    cell("Reload",fmt(s.reload,1),"s",{w:"n"}),
+    cell("Magazine",s.mag,"rds",{w:"n"}),
+    cell("Damage",fmt(s.dmgNear)+" → "+fmt(s.dmgFar),"hp",{hot:true,w:"w"}),
+    cell("Damage / s",fmt(s.dpsNear)+" → "+fmt(s.dpsFar),"hp/s",{w:"w"}),
+    cell("Hits to kill",s.htkNear+" → "+s.htkFar,"",{kill:true,w:"n"}),
+  ]));
+  // --- anti-armor ---
+  R.appendChild(group("Anti-armor",[
+    cell("Armor damage",fmt(s.armorMin)+"–"+fmt(s.armorMax),"hp",{hot:true,w:"w"}),
+    cell("Armor pen · near",fmt(s.penMin,0)+"–"+fmt(s.penMax,0),"mm",{hot:true,w:"w"}),
+    cell("Armor pen · far",fmt(s.penFarMin,0)+"–"+fmt(s.penFarMax,0),"mm",{w:"w"}),
+    cell("Pen range",fmt(s.penNearRange)+"–"+fmt(s.penFarRange),"m",{w:"n"}),
+    (a.armorPenetrationAngle!=null)?cell("Pen angle",fmt(a.armorPenetrationAngle,0),"°",{w:"n"}):null,
+    (a.ricochetAngle!=null)?cell("Ricochet angle",fmt(a.ricochetAngle,0),"°",{w:"n"}):null,
+    a.explosiondamage?cell("Explosion dmg",fmt(a.explosiondamage),"hp",{w:"n"}):null,
+    a.explosionradius?cell("Blast radius",fmt(a.explosionradius,1),"m",{w:"n"}):null,
+  ].filter(Boolean)));
+  // --- ballistics ---
+  R.appendChild(group("Ballistics",[
+    cell("Muzzle velocity",fmt(s.velocity),"m/s",{w:"n"}),
+    cell("Range",fmt(s.rNear,0)+" → "+fmt(s.rFar,0),"m",{w:"w"}),
+    cell("Max range",fmt(s.rMax),"m",{w:"n"}),
+    cell("Cone of fire",fmt(s.cone,3),"°",{w:"n"}),
+  ]));
+
+  // combat curves (side column) + accuracy visual, reusing infantry machinery
+  lastStats=s; lastStatsBase=b;
+  if(C){ const cw=el("div"); cw.appendChild(el("div","curves-title","Combat curves")); cw.appendChild(combatGraphs(s)); C.appendChild(cw); }
+  lastCone=s.cone;
+  R.appendChild(sectionOf("Accuracy & recoil",buildAccuracy({target:"soldier",recoil:true})));
+  updateSpread();
+}
+
 function syncTabs(){
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute("aria-selected",b.dataset.view===state.view));
   $("#detailView").classList.toggle("hidden",state.view!=="detail");
   $("#tableView").classList.toggle("active",state.view==="table");
   $("#versusView").classList.toggle("active",state.view==="versus");
+  if(state.mode==="veh"){
+    if(state.view==="table"){$("#tableView").innerHTML='<div class="notice">Vehicle list view is coming next. Use the sidebar to browse vehicles for now.</div>';}
+    else if(state.view==="versus"){$("#versusView").innerHTML='<div class="notice">Vehicle comparison is coming next.</div>';}
+    else renderVehicleDetail();
+    return;
+  }
   if(state.view==="table")renderTable();
   else if(state.view==="versus")renderVersus();
   else renderDetail();
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;syncTabs();});
+document.querySelectorAll('.modeswitch button').forEach(b=>b.onclick=()=>applyMode(b.dataset.mode));
 $("#search").oninput=e=>buildSidebar(e.target.value);
 
 // contact & support popover
