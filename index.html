@@ -59,8 +59,16 @@ body.veh{
 .hidden-veh{display:none !important}
 .veh-cfg{margin:0 0 14px}
 .veh-cfg .cfg-sel{max-width:320px}
-.veh-badges{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px}
-.veh-badges .cfg-seg>label{display:block;font-family:"Oswald";text-transform:uppercase;letter-spacing:.08em;font-size:9px;color:var(--ink-faint);margin-bottom:3px}
+.veh-badges{display:flex;flex-wrap:wrap;gap:20px;margin-top:10px}
+.veh-badges .cfg-seg>label{display:block;font-family:"Oswald";text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--ink-dim);margin-bottom:5px}
+/* section dividers in the config / vehicle armament panels */
+.cfg-divider{font-family:"Oswald";text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--brass);
+  border-bottom:1px solid var(--brass-dim);padding-bottom:4px;margin:16px 0 10px}
+.cfg-divider:first-child{margin-top:0}
+/* vehicle mode: larger, more legible ammo + badge controls */
+body.veh .veh-cfg .cfg-sel label{font-size:12px}
+body.veh .veh-cfg .cfg-sel select{font-size:15px;padding:7px 8px}
+body.veh .veh-badges .seg button{font-size:14px;padding:7px 10px;min-width:52px}
 .wrapseg{flex-wrap:wrap}
 .wrapseg button{white-space:nowrap}
 *{box-sizing:border-box}
@@ -348,15 +356,19 @@ td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{backgro
       </div>
       <div class="layout">
         <div class="config">
+          <div class="cfg-divider">Loadout</div>
           <div class="cfg-selects" id="cfgSelects">
             <div class="cfg-sel"><label>Ammunition</label><select id="ammoSel"></select></div>
             <div id="modBlocks" style="display:contents"></div>
           </div>
+          <div class="cfg-divider">Target</div>
           <div class="cfg-seg" data-key="hitbox"><label>Hit location</label><div class="seg" id="hitboxSeg"></div></div>
           <div class="cfg-seg" data-key="heavyset"><label>Enemy Heavy Set</label><div class="seg" id="heavySeg"></div></div>
+          <div class="cfg-divider">Badges</div>
           <div class="cfg-seg" data-key="reload"><label>Fast Reload badge</label><div class="seg" id="reloadSeg"></div></div>
           <div class="cfg-seg" data-key="ironfist"><label>Inf / Iron Fist badge</label><div class="seg" id="ironFistSeg"></div></div>
           <div class="cfg-seg" data-key="grenadier" id="grenadierRow"><label>Grenadier badge</label><div class="seg" id="grenadierSeg"></div></div>
+          <div class="cfg-divider">Shooter</div>
           <div class="cfg-seg" data-key="stance"><label>Stance (sway only)</label><div class="seg" id="stanceSeg"></div></div>
           <div class="cfg-btns"><button class="resetbtn" id="resetBtn">Reset</button><button class="resetbtn" id="compareBtn">⇄ Compare</button></div>
         </div>
@@ -926,9 +938,12 @@ function buildAccuracy(opts={}){
   setTimeout(()=>{
     const sl=document.getElementById("spreadSlider"); if(sl)sl.oninput=()=>{state.spreadRange=+sl.value;updateSpread();};
     const ss=document.getElementById("silSeg");
-    if(ss) seg(ss,[{id:"soldier",label:"Soldier"},{id:"tank",label:"Tank"}],state.silTarget,id=>{state.silTarget=id;lastTarget=id;
+    const silItems=[{id:"soldier",label:"Soldier"},{id:"tank",label:"Tank"}];
+    const pickSil=id=>{state.silTarget=id;lastTarget=id;
+      seg(ss,silItems,state.silTarget,pickSil); // re-render so the highlight follows the pick
       const cap=document.getElementById("silCap"); if(cap)cap.textContent=id==="tank"?"Spread vs an M5A1 Stuart":"Spread vs a soldier";
-      updateSpread();});
+      updateSpread();};
+    if(ss) seg(ss,silItems,state.silTarget,pickSil);
   },0);
   return wrap;
 }
@@ -1033,9 +1048,13 @@ function metricChart(s,opts){
   let peak=0; for(let d=0;d<=maxD;d+=maxD/60)peak=Math.max(peak,opts.yAt(d));
   const yStep=niceStep(Math.max(peak,1),4), yMax=Math.max(yStep,Math.ceil(peak/yStep)*yStep);
   const X=d=>pad.l+(d/maxD)*iw, Y=v=>pad.t+ih-(Math.min(v,yMax)/yMax)*ih;
+  // decimals from the step size, so labels round cleanly (no 0.6000000000000001)
+  const decOf=step=>step>=1?0:Math.min(2,Math.ceil(-Math.log10(step))||0);
+  const ydec=decOf(yStep), xdec=decOf(xStep);
+  const fx=(v,dec)=>Number(v.toFixed(dec)).toFixed(dec);
   let grid="";
-  for(let v=0;v<=yMax+.001;v+=yStep)grid+=`<line x1="${pad.l}" y1="${Y(v)}" x2="${W-pad.r}" y2="${Y(v)}" stroke="#ffffff0e"/><text x="${pad.l-5}" y="${Y(v)+4}" fill="#8a8770" font-size="12" text-anchor="end" font-family="JetBrains Mono">${opts.yFmt?opts.yFmt(v):v}</text>`;
-  for(let d=0;d<=maxD+.001;d+=xStep)grid+=`<text x="${X(d)}" y="${H-8}" fill="#8a8770" font-size="12" text-anchor="middle" font-family="JetBrains Mono">${d}</text>`;
+  for(let i=0;i*yStep<=yMax+.0001;i++){const v=i*yStep;grid+=`<line x1="${pad.l}" y1="${Y(v)}" x2="${W-pad.r}" y2="${Y(v)}" stroke="#ffffff0e"/><text x="${pad.l-5}" y="${Y(v)+4}" fill="#8a8770" font-size="12" text-anchor="end" font-family="JetBrains Mono">${opts.yFmt?opts.yFmt(v):fx(v,ydec)}</text>`;}
+  for(let i=0;i*xStep<=maxD+.0001;i++){const d=i*xStep;grid+=`<text x="${X(d)}" y="${H-8}" fill="#8a8770" font-size="12" text-anchor="middle" font-family="JetBrains Mono">${fx(d,xdec)}</text>`;}
   // build path (stepped for integer metrics)
   let p=[],prev=null;
   for(let d=0;d<=maxD;d+=maxD/200){const v=opts.yAt(d);
@@ -1046,7 +1065,7 @@ function metricChart(s,opts){
   const box=el("div","mini-chart");
   box.innerHTML=`<div class="mini-title">${opts.title}</div><div class="mc-plot">${svg}<div class="mc-tip"></div></div>`;
   const svgEl=box.querySelector("svg"),tip=box.querySelector(".mc-tip"),cross=box.querySelector(".mc-cross"),cl=box.querySelector(".mcl"),cd=box.querySelector(".mcd");
-  const move=ev=>{const rect=svgEl.getBoundingClientRect();const px=(ev.touches?ev.touches[0].clientX:ev.clientX)-rect.left;let d=((px/rect.width*W)-pad.l)/iw*maxD;d=Math.max(0,Math.min(maxD,d));const v=opts.yAt(d),vx=X(d);cross.style.opacity=1;cl.setAttribute("x1",vx);cl.setAttribute("x2",vx);cd.setAttribute("cx",vx);cd.setAttribute("cy",Y(v));tip.style.opacity=1;tip.style.left=Math.min(rect.width-70,px+10)+"px";tip.innerHTML=`${Math.round(d)}m · <b>${opts.yFmt?opts.yFmt(v):Math.round(v)}</b>`;};
+  const move=ev=>{const rect=svgEl.getBoundingClientRect();const px=(ev.touches?ev.touches[0].clientX:ev.clientX)-rect.left;let d=((px/rect.width*W)-pad.l)/iw*maxD;d=Math.max(0,Math.min(maxD,d));const v=opts.yAt(d),vx=X(d);cross.style.opacity=1;cl.setAttribute("x1",vx);cl.setAttribute("x2",vx);cd.setAttribute("cx",vx);cd.setAttribute("cy",Y(v));tip.style.opacity=1;tip.style.left=Math.min(rect.width-70,px+10)+"px";tip.innerHTML=`${fx(d,xdec)}m · <b>${opts.yFmt?opts.yFmt(v):Math.round(v)}</b>`;};
   const leave=()=>{cross.style.opacity=0;tip.style.opacity=0;};
   svgEl.addEventListener("mousemove",move);svgEl.addEventListener("mouseleave",leave);
   svgEl.addEventListener("touchmove",move,{passive:true});svgEl.addEventListener("touchend",leave);
@@ -1465,10 +1484,13 @@ function vehicleGraphs(s){
   const pFull=(s.penMin+s.penMax)/2, pfar=(s.penFarMin+s.penFarMax)/2;
   const lerp=(full,far)=>d=>{ if(fr<=nr)return full; if(d<=nr)return full; if(d>=fr)return far; return full+(far-full)*(d-nr)/(fr-nr); };
   const arm=lerp(dFull,dfar), pen=lerp(pFull,pfar);
+  // sustained armor DPS: scale the armor-damage curve by the data-sheet DPS rate
+  // (accounts for reload/clip cycle, so it starts at s.armorDPS and tracks the Gunner badge)
+  const dpsRate = dFull>0 ? s.armorDPS/dFull : s.rpm/60;
   const maxD=Math.max(fr*1.25,100);
   const grid=el("div","mini-grid");
   grid.appendChild(metricChart(s,{title:"Armor damage",color:"var(--danger)",yAt:arm,maxD}));
-  grid.appendChild(metricChart(s,{title:"Armor DPS",color:"#e07a2f",yAt:d=>arm(d)*s.rpm/60,maxD}));
+  grid.appendChild(metricChart(s,{title:"Armor DPS",color:"#e07a2f",yAt:d=>arm(d)*dpsRate,maxD}));
   grid.appendChild(metricChart(s,{title:"Armor pen (mm)",color:"var(--good)",yAt:pen,maxD}));
   const wrap=el("div","chartwrap");
   wrap.appendChild(el("div","chart-legend",`<span class="k" style="color:var(--ink-faint)">vs distance · armor damage, sustained armor DPS, penetration</span>`));
@@ -1514,9 +1536,11 @@ function renderVehicleDetail(){
   if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
   // config bar: ammunition + Gunner + Grenadier badges
   const cfgbar=el("div","veh-cfg");
+  cfgbar.appendChild(el("div","cfg-divider","Loadout"));
   const ammoWrap=el("div","cfg-sel"); ammoWrap.appendChild(el("label",null,"Ammunition"));
   const asel=el("select");[vw.defaultAmmo,...(vw.ammunition||[])].forEach((a,i)=>{const o=el("option",null,a.name+(i===0?" (default)":""));o.value=a.id;if(a.id===state.vAmmoId)o.selected=true;asel.appendChild(o);});
   asel.onchange=()=>{state.vAmmoId=+asel.value;renderVehicleDetail();}; ammoWrap.appendChild(asel); cfgbar.appendChild(ammoWrap);
+  cfgbar.appendChild(el("div","cfg-divider","Badges"));
   const badgeRow=el("div","veh-badges");
   const addSeg=(lbl,items,cur,set)=>{const b=el("div","cfg-seg");b.appendChild(el("label",null,lbl));const sg=el("div","seg");b.appendChild(sg);seg(sg,items,cur,id=>{set(id);renderVehicleDetail();});badgeRow.appendChild(b);};
   addSeg("Gunner badge (reload)",GUNNER,state.vgunner,id=>state.vgunner=id);
