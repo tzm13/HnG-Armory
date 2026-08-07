@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>H&amp;G Armory - Heroes &amp; Generals Weapon Stats &amp; TTK Calculator</title>
+<title>H&amp;G Armory - Heroes &amp; Generals Weapons and Vehicles Stats &amp; TTK Calculator</title>
 <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="shortcut icon" href="/favicon.ico" />
@@ -59,6 +59,8 @@ body.veh{
 .hidden-veh{display:none !important}
 .veh-cfg{margin:0 0 14px}
 .veh-cfg .cfg-sel{max-width:320px}
+.veh-badges{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px}
+.veh-badges .cfg-seg>label{display:block;font-family:"Oswald";text-transform:uppercase;letter-spacing:.08em;font-size:9px;color:var(--ink-faint);margin-bottom:3px}
 .wrapseg{flex-wrap:wrap}
 .wrapseg button{white-space:nowrap}
 *{box-sizing:border-box}
@@ -116,6 +118,7 @@ a{color:var(--brass)}
 .wpn-item{padding:6px 12px 6px 24px;font-size:14px;color:var(--ink-dim);cursor:pointer;border-left:3px solid transparent;display:flex;justify-content:space-between;gap:8px}
 .wpn-item:hover{background:var(--panel-2);color:var(--ink)}
 .wpn-item[aria-current="true"]{background:#2c3020;color:var(--ink);border-left-color:var(--brass)}
+body.veh .wpn-item[aria-current="true"]{background:#1f2c34}
 .wpn-item .ep{font-family:"JetBrains Mono";font-size:11px;color:var(--ink-faint)}
 
 .main{overflow-y:auto;max-height:calc(100vh - 55px);padding:22px 26px 60px}
@@ -417,6 +420,10 @@ const GRENADIER = [    // Grenadier badge: boosts explosives' player (blast) dam
   {id:"none",label:"None",mult:1.00},{id:"bronze",label:"Bronze",mult:1.08},
   {id:"silver",label:"Silver",mult:1.11},{id:"gold",label:"Gold",mult:1.15},
 ];
+const GUNNER = [       // Gunner badge (vehicles): cuts weapon reload time
+  {id:"none",label:"None",mult:1.00},{id:"bronze",label:"Bronze",mult:0.89},
+  {id:"silver",label:"Silver",mult:0.82},{id:"gold",label:"Gold",mult:0.75},
+];
 const STANCES = [      // stance only affects sway; ADS == Stand so it's dropped
   {id:"stand",label:"Stand"},{id:"crouch",label:"Crouch"},{id:"prone",label:"Prone"},
 ];
@@ -499,7 +506,7 @@ function compute(w, cfg){
   const penFarPct = ammo.armorPenetrationFarPercent ?? 0;
   const penFarMin = penMin * penFarPct, penFarMax = penMax * penFarPct;
 
-  const reload = w.reloadtime * (FASTRELOAD.find(x=>x.id===cfg.fastReload)||{mult:1}).mult;
+  const reload = w.reloadtime * (FASTRELOAD.find(x=>x.id===cfg.fastReload)||{mult:1}).mult * (GUNNER.find(x=>x.id===cfg.gunner)||{mult:1}).mult;
   // sustained armor damage per second: empty a mag then reload (works for 1-shot launchers too)
   const avgArmor=(armorMin+armorMax)/2;
   const cycle=(w.clipsize-1)*(60/rpm)+reload;
@@ -544,7 +551,7 @@ let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"
            vs:{hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"},
            vsBarClosed:false,vsGroupClosed:{},
            mode:"inf",vid:(typeof VEHICLES!=="undefined"?VEHICLES[0].id:null),vweap:0,vAmmoId:null,vModIds:[],
-           vhitbox:"torso",vheavyset:"none",vopen:{}};
+           vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{}};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
 let lastTarget="soldier"; // spread target: soldier (guns) or tank (AT weapons)
 let lastRecoil=true; // whether the recoil pane is shown
@@ -1406,22 +1413,49 @@ function selectVehicle(id){
 
 function buildVehicleSidebar(filter=""){
   const host=$("#wpnList"); host.innerHTML=""; const f=filter.trim().toLowerCase(), searching=!!f;
-  VEHICLE_CATEGORY_ORDER.forEach(cat=>{
-    let items=VEHICLES.filter(v=>v.category===cat);
-    if(f) items=items.filter(v=>v.name.toLowerCase().includes(f));
-    if(!items.length) return;
-    const open = searching ? true : (state.vopen[cat]!==false);
-    const ch=el("div","cat-head"+(open?"":" closed"),`<span class="tw">▾</span>${cat} <span class="cnt">${items.length}</span>`);
-    ch.onclick=()=>{state.vopen[cat]=!(state.vopen[cat]!==false);buildVehicleSidebar($("#search").value);};
-    host.appendChild(ch);
-    if(!open) return;
-    items.sort((a,b)=>a.factiontemplateid-b.factiontemplateid||a.name.localeCompare(b.name)).forEach(v=>{
-      const fac=FACTIONS[v.factiontemplateid]||{color:"#888"};
-      const it=el("div","wpn-item",`<span><span class="faction-dot" style="background:${fac.color}"></span>${v.name}</span>`);
-      it.dataset.vid=v.id; it.setAttribute("aria-current",v.id===state.vid);
-      it.onclick=()=>selectVehicle(v.id); host.appendChild(it);
+  let shown=VEHICLES.filter(v=>!f||v.name.toLowerCase().includes(f));
+  const FAC_ORDER=[1,2,3,0];
+  FAC_ORDER.forEach(fid=>{
+    const facVs=shown.filter(v=>v.factiontemplateid===fid);
+    if(!facVs.length) return;
+    const fac=FACTIONS[fid]||{name:"?",color:"#888"};
+    const fkey="f"+fid, fOpen=searching || !!state.vopen[fkey];
+    const fh=el("div","faction-head"+(fOpen?"":" closed"),
+      `<span class="tw">▾</span><span class="chip" style="background:${fac.color}"></span>${fac.name}`);
+    fh.onclick=()=>{state.vopen[fkey]=!state.vopen[fkey];buildVehicleSidebar($("#search").value);};
+    host.appendChild(fh);
+    if(!fOpen) return;
+    VEHICLE_CATEGORY_ORDER.forEach(cat=>{
+      const items=facVs.filter(v=>v.category===cat);
+      if(!items.length) return;
+      const ckey=fkey+":"+cat, cOpen=searching || !!state.vopen[ckey];
+      const ch=el("div","cat-head"+(cOpen?"":" closed"),`<span class="tw">▾</span>${cat} <span class="cnt">${items.length}</span>`);
+      ch.onclick=()=>{state.vopen[ckey]=!state.vopen[ckey];buildVehicleSidebar($("#search").value);};
+      host.appendChild(ch);
+      if(!cOpen) return;
+      items.sort((a,b)=>a.name.localeCompare(b.name)).forEach(v=>{
+        const it=el("div","wpn-item",`<span>${v.name}</span>`);
+        it.dataset.vid=v.id; it.setAttribute("aria-current",v.id===state.vid);
+        it.onclick=()=>selectVehicle(v.id); host.appendChild(it);
+      });
     });
   });
+}
+
+// vehicle combat curves: armor damage + armor DPS over distance (no HTK/TTK)
+function vehicleGraphs(s){
+  const a=s.ammo;
+  const nr=s.penNearRange||0, fr=s.penFarRange||Math.max(nr*2,100);
+  const farPct=(a.armorDamageFarPercent!=null)?a.armorDamageFarPercent:1;
+  const full=(s.armorMin+s.armorMax)/2, far=full*farPct;
+  const arm=d=>{ if(fr<=nr) return full; if(d<=nr)return full; if(d>=fr)return far; return full+(far-full)*(d-nr)/(fr-nr); };
+  const maxD=Math.max(fr*1.25,100);
+  const grid=el("div","mini-grid");
+  grid.appendChild(metricChart(s,{title:"Armor damage",color:"var(--danger)",yAt:arm,maxD}));
+  grid.appendChild(metricChart(s,{title:"Armor DPS",color:"#e07a2f",yAt:d=>arm(d)*s.rpm/60,maxD}));
+  const wrap=el("div","chartwrap");
+  wrap.appendChild(el("div","chart-legend",`<span class="k" style="color:var(--ink-faint)">vs distance · avg armor damage & sustained armor DPS</span>`));
+  wrap.appendChild(grid); return wrap;
 }
 
 function renderVehicleDetail(){
@@ -1461,35 +1495,41 @@ function renderVehicleDetail(){
 
   const vw=ws[Math.min(state.vweap,ws.length-1)].w;
   if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
-  // ammo + mods + anti-infantry target selectors
+  // config bar: ammunition + Gunner + Grenadier badges
   const cfgbar=el("div","veh-cfg");
   const ammoWrap=el("div","cfg-sel"); ammoWrap.appendChild(el("label",null,"Ammunition"));
   const asel=el("select");[vw.defaultAmmo,...(vw.ammunition||[])].forEach((a,i)=>{const o=el("option",null,a.name+(i===0?" (default)":""));o.value=a.id;if(a.id===state.vAmmoId)o.selected=true;asel.appendChild(o);});
   asel.onchange=()=>{state.vAmmoId=+asel.value;renderVehicleDetail();}; ammoWrap.appendChild(asel); cfgbar.appendChild(ammoWrap);
+  const badgeRow=el("div","veh-badges");
+  const addSeg=(lbl,items,cur,set)=>{const b=el("div","cfg-seg");b.appendChild(el("label",null,lbl));const sg=el("div","seg");b.appendChild(sg);seg(sg,items,cur,id=>{set(id);renderVehicleDetail();});badgeRow.appendChild(b);};
+  addSeg("Gunner badge (reload)",GUNNER,state.vgunner,id=>state.vgunner=id);
+  addSeg("Grenadier badge (HE vs infantry)",GRENADIER,state.vgrenadier,id=>state.vgrenadier=id);
+  cfgbar.appendChild(badgeRow);
   R.appendChild(cfgbar);
 
-  const cfg={ammoId:state.vAmmoId,modIds:state.vModIds,hitbox:state.vhitbox,heavyset:state.vheavyset,fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"};
+  const cfg={ammoId:state.vAmmoId,modIds:state.vModIds,hitbox:state.vhitbox,heavyset:state.vheavyset,fastReload:"none",ironFist:"none",grenadier:"none",gunner:state.vgunner,stance:"stand"};
   const s=compute(vw,cfg), a=s.ammo;
-  const b=compute(vw,{...cfg,ammoId:vw.defaultAmmo.id,modIds:[]});
+  const b=compute(vw,{...cfg,ammoId:vw.defaultAmmo.id,modIds:[],gunner:"none"});
+  const grenMul=(GRENADIER.find(x=>x.id===state.vgrenadier)||{mult:1}).mult; // HE splash vs infantry
 
-  // --- anti-infantry ---
-  R.appendChild(group("Anti-infantry",[
-    cell("Rate of fire",fmt(s.rpm),"rpm",{hot:true,w:"n"}),
-    cell("Reload",fmt(s.reload,1),"s",{w:"n"}),
-    cell("Magazine",s.mag,"rds",{w:"n"}),
-    cell("Damage",fmt(s.dmgNear)+" → "+fmt(s.dmgFar),"hp",{hot:true,w:"w"}),
-    cell("Damage / s",fmt(s.dpsNear)+" → "+fmt(s.dpsFar),"hp/s",{w:"w"}),
-    cell("Hits to kill",s.htkNear+" → "+s.htkFar,"",{kill:true,w:"n"}),
-  ]));
-  // --- anti-armor ---
+  // --- anti-armor (shown first) ---
   R.appendChild(group("Anti-armor",[
     cell("Armor damage",fmt(s.armorMin)+"–"+fmt(s.armorMax),"hp",{hot:true,w:"w"}),
+    cell("Armor DPS",fmt(s.armorDPS,0),"hp/s",{hot:true,w:"n"}),
     cell("Armor pen · near",fmt(s.penMin,0)+"–"+fmt(s.penMax,0),"mm",{hot:true,w:"w"}),
     cell("Armor pen · far",fmt(s.penFarMin,0)+"–"+fmt(s.penFarMax,0),"mm",{w:"w"}),
     cell("Pen range",fmt(s.penNearRange)+"–"+fmt(s.penFarRange),"m",{w:"n"}),
     (a.armorPenetrationAngle!=null)?cell("Pen angle",fmt(a.armorPenetrationAngle,0),"°",{w:"n"}):null,
     (a.ricochetAngle!=null)?cell("Ricochet angle",fmt(a.ricochetAngle,0),"°",{w:"n"}):null,
-    a.explosiondamage?cell("Explosion dmg",fmt(a.explosiondamage),"hp",{w:"n"}):null,
+  ].filter(Boolean)));
+  // --- anti-infantry ---
+  R.appendChild(group("Anti-infantry",[
+    cell("Rate of fire",fmt(s.rpm),"rpm",{hot:true,w:"n"}),
+    cell("Reload",fmt(s.reload,1),"s",{delta:s.reload-b.reload,dd:1,betterWhenUp:false,w:"n"}),
+    cell("Magazine",s.mag,"rds",{w:"n"}),
+    cell("Damage",fmt(s.dmgNear)+" → "+fmt(s.dmgFar),"hp",{hot:true,w:"w"}),
+    cell("Damage / s",fmt(s.dpsNear)+" → "+fmt(s.dpsFar),"hp/s",{w:"w"}),
+    a.explosiondamage?cell("Explosion dmg",fmt(Math.floor(a.explosiondamage*grenMul)),"hp",{hot:true,w:"n"}):null,
     a.explosionradius?cell("Blast radius",fmt(a.explosionradius,1),"m",{w:"n"}):null,
   ].filter(Boolean)));
   // --- ballistics ---
@@ -1500,9 +1540,9 @@ function renderVehicleDetail(){
     cell("Cone of fire",fmt(s.cone,3),"°",{w:"n"}),
   ]));
 
-  // combat curves (side column) + accuracy visual, reusing infantry machinery
+  // combat curves (side column, armor-focused) + accuracy visual
   lastStats=s; lastStatsBase=b;
-  if(C){ const cw=el("div"); cw.appendChild(el("div","curves-title","Combat curves")); cw.appendChild(combatGraphs(s)); C.appendChild(cw); }
+  if(C){ const cw=el("div"); cw.appendChild(el("div","curves-title","Combat curves")); cw.appendChild(vehicleGraphs(s)); C.appendChild(cw); }
   lastCone=s.cone;
   R.appendChild(sectionOf("Accuracy & recoil",buildAccuracy({target:"soldier",recoil:true})));
   updateSpread();
