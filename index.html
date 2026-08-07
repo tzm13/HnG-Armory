@@ -1520,9 +1520,14 @@ function renderVehicleDetail(){
     v.reverseSpeedKPH?cell("Reverse",fmt(v.reverseSpeedKPH),"km/h",{w:"n"}):null,
     v.mass?cell("Mass",fmt(v.mass/1000,1),"t",{w:"n"}):null,
     v.fuelCapacity?cell("Fuel",fmt(v.fuelCapacity),"L",{w:"n"}):null,
+    (v.spawnCost!=null)?cell("Spawn cost",cr(fmt(v.spawnCost)),"",{hot:true,w:"n"}):null,
     v.deployPoolCost?cell("Deploy pool",fmt(v.deployPoolCost),"",{w:"n"}):null,
     v.purchaseCostCredits?cell("Cost to buy",cr(fmt(v.purchaseCostCredits))+" "+gd(fmt(v.purchaseCostGold||0)),"",{w:"w"}):null,
   ].filter(Boolean)));
+  if(typeof CRATE_COSTS!=="undefined"){
+    R.appendChild(group("Supply crates · cost per use",
+      Object.keys(CRATE_COSTS).map(k=>cell(k,cr(fmt(CRATE_COSTS[k])),"",{w:"n"}))));
+  }
 
   if(!ws.length){ R.appendChild(el("div","hint","This vehicle has no armament.")); return; }
 
@@ -1556,6 +1561,9 @@ function renderVehicleDetail(){
   const radius=a.explosionradius||0;
   const killR=(explDmg>TARGET_HP&&radius>0)?radius*(1-TARGET_HP/explDmg):0;
 
+  // per-shell resupply cost (from the wiki's "Cost per Shot"), keyed by shell name
+  const shellCost=(typeof AMMO_SHELL_COST!=="undefined")?AMMO_SHELL_COST[a.name]:null;
+
   // --- anti-armor (shown first) ---
   R.appendChild(group("Anti-armor",[
     cell("Armor damage",fmt(s.armorMin)+"–"+fmt(s.armorMax),"hp",{hot:true,w:"w"}),
@@ -1578,12 +1586,13 @@ function renderVehicleDetail(){
     explDmg&&radius?cell("Kill range",fmt(killR,2),"m",{kill:true,w:"n"}):null,
   ].filter(Boolean)));
   // --- ballistics ---
-  R.appendChild(group("Ballistics",[
+  R.appendChild(group("Ballistics & cost",[
     cell("Muzzle velocity",fmt(s.velocity),"m/s",{w:"n"}),
     cell("Range",fmt(s.rNear,0)+" → "+fmt(s.rFar,0),"m",{w:"w"}),
     cell("Max range",fmt(s.rMax),"m",{w:"n"}),
     cell("Cone of fire",fmt(s.cone,3),"°",{w:"n"}),
-  ]));
+    (shellCost!=null)?cell("Cost per shot",cr(fmt(shellCost,2)),"",{w:"n"}):null,
+  ].filter(Boolean)));
 
   // combat curves (side column: armor curves, plus blast falloff for HE) + accuracy
   lastStats=s; lastStatsBase=b;
