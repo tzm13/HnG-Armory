@@ -1420,8 +1420,8 @@ const curVehicle=()=>VEHICLES.find(v=>v.id===state.vid)||VEHICLES[0];
 // list a vehicle's weapons as [{label, w}] — main gun first, then aux
 function vehWeapons(v){
   const out=[];
-  if(v.mainWeapon && (v.mainWeapon.defaultAmmo||v.mainWeapon.ammunition)) out.push({label:"Main — "+v.mainWeapon.name,w:v.mainWeapon});
-  (v.auxWeapons||[]).forEach((a,i)=>{ if(a&&(a.defaultAmmo||a.ammunition)) out.push({label:(v.mainWeapon?"Aux — ":"")+a.name,w:a}); });
+  if(v.mainWeapon && (v.mainWeapon.defaultAmmo||v.mainWeapon.ammunition)) out.push({label:"Main — "+v.mainWeapon.name,w:v.mainWeapon,main:true});
+  (v.auxWeapons||[]).forEach((a,i)=>{ if(a&&(a.defaultAmmo||a.ammunition)) out.push({label:(v.mainWeapon?"Aux — ":"")+a.name,w:a,main:false}); });
   return out;
 }
 function curVehWeapon(){ const ws=vehWeapons(curVehicle()); return ws[Math.min(state.vweap,ws.length-1)]; }
@@ -1561,8 +1561,11 @@ function renderVehicleDetail(){
   const radius=a.explosionradius||0;
   const killR=(explDmg>TARGET_HP&&radius>0)?radius*(1-TARGET_HP/explDmg):0;
 
-  // per-shell resupply cost (from the wiki's "Cost per Shot"), keyed by shell name
-  const shellCost=(typeof AMMO_SHELL_COST!=="undefined")?AMMO_SHELL_COST[a.name]:null;
+  // per-shell resupply cost from the wiki, keyed by vehicle+shell. Free-fire categories,
+  // and coaxial/hull MGs (aux weapons), shoot for free; only the main weapon charges.
+  const selMain=ws[Math.min(state.vweap,ws.length-1)].main;
+  const freeFire=selMain===false || ((typeof VEHICLE_FREE_FIRE_CATEGORIES!=="undefined")&&VEHICLE_FREE_FIRE_CATEGORIES.includes(v.category));
+  const shellCost=freeFire?"free":((typeof AMMO_COST!=="undefined")?AMMO_COST[v.id+":"+a.id]:null);
 
   // --- anti-armor (shown first) ---
   R.appendChild(group("Anti-armor",[
@@ -1591,7 +1594,7 @@ function renderVehicleDetail(){
     cell("Range",fmt(s.rNear,0)+" → "+fmt(s.rFar,0),"m",{w:"w"}),
     cell("Max range",fmt(s.rMax),"m",{w:"n"}),
     cell("Cone of fire",fmt(s.cone,3),"°",{w:"n"}),
-    (shellCost!=null)?cell("Cost per shot",cr(fmt(shellCost,2)),"",{w:"n"}):null,
+    (shellCost==="free")?cell("Cost per shot","Free","",{w:"n"}):((shellCost!=null)?cell("Cost per shot",cr(fmt(shellCost,2)),"",{w:"n"}):null),
   ].filter(Boolean)));
 
   // combat curves (side column: armor curves, plus blast falloff for HE) + accuracy
