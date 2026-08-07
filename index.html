@@ -76,6 +76,7 @@ a{color:var(--brass)}
 @media(max-width:820px){.app{grid-template-columns:1fr}}
 
 .topbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:12px 20px;background:linear-gradient(180deg,#20241a,#181b12);border-bottom:2px solid var(--brass-dim)}
+body.veh .topbar{background:linear-gradient(180deg,#1a232b,#111820)}
 .brand{display:flex;align-items:baseline;gap:12px}
 .brand .stencil{font-family:"Oswald";font-weight:700;font-size:22px;letter-spacing:.14em;text-transform:uppercase}
 .brand .tag{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--brass)}
@@ -157,11 +158,15 @@ body.veh .layout{grid-template-columns:1fr}
 .stat-group.sec-closed .sec-body{display:none}
 .grid{display:flex;flex-wrap:wrap;gap:6px}
 .cell{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px;flex:1 1 118px;min-width:118px}
-.cell-n{flex:1 1 92px;min-width:92px}
+.cell-n{flex:1 1 92px;min-width:92px;max-width:150px}
+.cell{max-width:260px}
+.cell-w{flex:2 1 150px;min-width:150px;max-width:320px}
+.arm-divider{border-top:2px solid var(--brass-dim);padding-top:16px;margin-top:6px}
+.arm-divider h3{color:var(--brass);font-size:16px;letter-spacing:.12em}
+.sil-seg button{padding:3px 9px;font-size:11px}
 .cr{color:#c3ccd4;white-space:nowrap}
 .gd{color:#e7c15a;white-space:nowrap}
 .cr small,.gd small{color:inherit}
-.cell-w{flex:2 1 150px;min-width:150px}
 .cell .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cell .v{font-family:"JetBrains Mono";font-size:16px;font-weight:500;margin-top:2px}
 .cell .v small{font-size:10px;color:var(--ink-dim);font-weight:400}
@@ -551,7 +556,7 @@ let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"
            vs:{hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"},
            vsBarClosed:false,vsGroupClosed:{},
            mode:"inf",vid:(typeof VEHICLES!=="undefined"?VEHICLES[0].id:null),vweap:0,vAmmoId:null,vModIds:[],
-           vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{}};
+           vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{},silTarget:null};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
 let lastTarget="soldier"; // spread target: soldier (guns) or tank (AT weapons)
 let lastRecoil=true; // whether the recoil pane is shown
@@ -904,18 +909,27 @@ function renderEquipment(R,w){
 const coneRadius=(deg,d)=> d*Math.tan((deg/2)*Math.PI/180); // ± metres at distance d
 
 function buildAccuracy(opts={}){
-  lastTarget=opts.target||"soldier"; lastRecoil=opts.recoil!==false;
+  if(opts.target && state.silTarget==null) state.silTarget=opts.target; // first-time default
+  if(state.silTarget==null) state.silTarget="soldier";
+  lastTarget=state.silTarget; lastRecoil=opts.recoil!==false;
   const wrap=el("div","chartwrap acc-wrap");
   const head=el("div",null,'<div id="spreadReadout" class="spread-readout"></div>'+
     '<div class="spread-slider"><span>10 m</span>'+
     `<input id="spreadSlider" class="rng" type="range" min="10" max="600" step="5" value="${state.spreadRange}">`+
-    '<span>600 m</span></div>');
+    '<span>600 m</span>'+
+    '<div class="seg sil-seg" id="silSeg" style="margin-left:auto"></div></div>');
   const spreadCap=lastTarget==="tank"?"Spread vs an M5A1 Stuart":"Spread vs a soldier";
-  let paneHTML='<div><div class="spread-cap">'+spreadCap+'</div><div id="silhouetteBox"></div></div>';
+  let paneHTML='<div><div class="spread-cap" id="silCap">'+spreadCap+'</div><div id="silhouetteBox"></div></div>';
   if(lastRecoil) paneHTML+='<div><div class="spread-cap">Recoil pattern (one mag)</div><div id="recoilBox"></div></div>';
   const panes=el("div","spread-panes "+(lastRecoil?"spread-panes-2":"spread-panes-1"),paneHTML);
   wrap.appendChild(head); wrap.appendChild(panes);
-  setTimeout(()=>{const sl=document.getElementById("spreadSlider"); if(sl)sl.oninput=()=>{state.spreadRange=+sl.value;updateSpread();};},0);
+  setTimeout(()=>{
+    const sl=document.getElementById("spreadSlider"); if(sl)sl.oninput=()=>{state.spreadRange=+sl.value;updateSpread();};
+    const ss=document.getElementById("silSeg");
+    if(ss) seg(ss,[{id:"soldier",label:"Soldier"},{id:"tank",label:"Tank"}],state.silTarget,id=>{state.silTarget=id;lastTarget=id;
+      const cap=document.getElementById("silCap"); if(cap)cap.textContent=id==="tank"?"Spread vs an M5A1 Stuart":"Spread vs a soldier";
+      updateSpread();});
+  },0);
   return wrap;
 }
 
@@ -1442,19 +1456,22 @@ function buildVehicleSidebar(filter=""){
   });
 }
 
-// vehicle combat curves: armor damage + armor DPS over distance (no HTK/TTK)
+// vehicle combat curves: armor damage + armor DPS + armor penetration over distance
 function vehicleGraphs(s){
   const a=s.ammo;
   const nr=s.penNearRange||0, fr=s.penFarRange||Math.max(nr*2,100);
-  const farPct=(a.armorDamageFarPercent!=null)?a.armorDamageFarPercent:1;
-  const full=(s.armorMin+s.armorMax)/2, far=full*farPct;
-  const arm=d=>{ if(fr<=nr) return full; if(d<=nr)return full; if(d>=fr)return far; return full+(far-full)*(d-nr)/(fr-nr); };
+  const dFar=(a.armorDamageFarPercent!=null)?a.armorDamageFarPercent:1;
+  const dFull=(s.armorMin+s.armorMax)/2, dfar=dFull*dFar;
+  const pFull=(s.penMin+s.penMax)/2, pfar=(s.penFarMin+s.penFarMax)/2;
+  const lerp=(full,far)=>d=>{ if(fr<=nr)return full; if(d<=nr)return full; if(d>=fr)return far; return full+(far-full)*(d-nr)/(fr-nr); };
+  const arm=lerp(dFull,dfar), pen=lerp(pFull,pfar);
   const maxD=Math.max(fr*1.25,100);
   const grid=el("div","mini-grid");
   grid.appendChild(metricChart(s,{title:"Armor damage",color:"var(--danger)",yAt:arm,maxD}));
   grid.appendChild(metricChart(s,{title:"Armor DPS",color:"#e07a2f",yAt:d=>arm(d)*s.rpm/60,maxD}));
+  grid.appendChild(metricChart(s,{title:"Armor pen (mm)",color:"var(--good)",yAt:pen,maxD}));
   const wrap=el("div","chartwrap");
-  wrap.appendChild(el("div","chart-legend",`<span class="k" style="color:var(--ink-faint)">vs distance · avg armor damage & sustained armor DPS</span>`));
+  wrap.appendChild(el("div","chart-legend",`<span class="k" style="color:var(--ink-faint)">vs distance · armor damage, sustained armor DPS, penetration</span>`));
   wrap.appendChild(grid); return wrap;
 }
 
@@ -1488,7 +1505,7 @@ function renderVehicleDetail(){
   if(!ws.length){ R.appendChild(el("div","hint","This vehicle has no armament.")); return; }
 
   // --- weapon selector ---
-  const wsec=el("div","stat-group"); wsec.appendChild(el("h3",null,"Armament"));
+  const wsec=el("div","stat-group arm-divider"); wsec.appendChild(el("h3",null,"⚙ Armament"));
   const wseg=el("div","seg wrapseg");
   ws.forEach((x,i)=>{const b=el("button",(i===state.vweap?"on":""),x.label);b.onclick=()=>{state.vweap=i;state.vAmmoId=x.w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();};wseg.appendChild(b);});
   wsec.appendChild(wseg); R.appendChild(wsec);
@@ -1511,6 +1528,9 @@ function renderVehicleDetail(){
   const s=compute(vw,cfg), a=s.ammo;
   const b=compute(vw,{...cfg,ammoId:vw.defaultAmmo.id,modIds:[],gunner:"none"});
   const grenMul=(GRENADIER.find(x=>x.id===state.vgrenadier)||{mult:1}).mult; // HE splash vs infantry
+  const explDmg=a.explosiondamage?Math.floor(a.explosiondamage*grenMul):0;
+  const radius=a.explosionradius||0;
+  const killR=(explDmg>TARGET_HP&&radius>0)?radius*(1-TARGET_HP/explDmg):0;
 
   // --- anti-armor (shown first) ---
   R.appendChild(group("Anti-armor",[
@@ -1529,8 +1549,9 @@ function renderVehicleDetail(){
     cell("Magazine",s.mag,"rds",{w:"n"}),
     cell("Damage",fmt(s.dmgNear)+" → "+fmt(s.dmgFar),"hp",{hot:true,w:"w"}),
     cell("Damage / s",fmt(s.dpsNear)+" → "+fmt(s.dpsFar),"hp/s",{w:"w"}),
-    a.explosiondamage?cell("Explosion dmg",fmt(Math.floor(a.explosiondamage*grenMul)),"hp",{hot:true,w:"n"}):null,
-    a.explosionradius?cell("Blast radius",fmt(a.explosionradius,1),"m",{w:"n"}):null,
+    explDmg?cell("Explosion dmg",fmt(explDmg),"hp",{hot:true,w:"n"}):null,
+    radius?cell("Blast radius",fmt(radius,1),"m",{w:"n"}):null,
+    explDmg&&radius?cell("Kill range",fmt(killR,2),"m",{kill:true,w:"n"}):null,
   ].filter(Boolean)));
   // --- ballistics ---
   R.appendChild(group("Ballistics",[
@@ -1540,11 +1561,13 @@ function renderVehicleDetail(){
     cell("Cone of fire",fmt(s.cone,3),"°",{w:"n"}),
   ]));
 
-  // combat curves (side column, armor-focused) + accuracy visual
+  // combat curves (side column: armor curves, plus blast falloff for HE) + accuracy
   lastStats=s; lastStatsBase=b;
-  if(C){ const cw=el("div"); cw.appendChild(el("div","curves-title","Combat curves")); cw.appendChild(vehicleGraphs(s)); C.appendChild(cw); }
+  if(C){ const cw=el("div"); cw.appendChild(el("div","curves-title","Combat curves")); cw.appendChild(vehicleGraphs(s));
+    if(explDmg&&radius){ cw.appendChild(el("div","curves-title","Blast falloff")); cw.appendChild(blastChart(explDmg,radius,killR)); }
+    C.appendChild(cw); }
   lastCone=s.cone;
-  R.appendChild(sectionOf("Accuracy & recoil",buildAccuracy({target:"soldier",recoil:true})));
+  R.appendChild(sectionOf("Accuracy & recoil",buildAccuracy({target:"tank",recoil:true})));
   updateSpread();
 }
 
