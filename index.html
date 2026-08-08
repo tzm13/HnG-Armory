@@ -80,7 +80,7 @@ button{font-family:inherit;color:inherit;cursor:pointer}
 a{color:var(--brass)}
 :focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 
-.app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+.app{display:grid;grid-template-columns:270px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
 @media(max-width:820px){.app{grid-template-columns:1fr}}
 
 .topbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:12px 20px;background:linear-gradient(180deg,#20241a,#181b12);border-bottom:2px solid var(--brass-dim)}
@@ -154,6 +154,9 @@ body.veh .layout{grid-template-columns:1fr}
 .seg{display:flex;flex-wrap:wrap;gap:4px}
 .seg button{flex:1 1 auto;background:#12140d;border:1px solid var(--line);color:var(--ink-dim);padding:6px 4px;font-size:12px;border-radius:var(--radius);letter-spacing:.04em;min-width:44px}
 .seg button[aria-pressed="true"]{background:var(--brass);color:#161810;border-color:var(--brass);font-weight:600}
+.seg button.on{background:var(--brass);color:#161810;border-color:var(--brass);font-weight:600}
+body.veh .seg button.on{color:#0d1116}
+.arm-seg{margin-top:12px}
 body.veh .seg button[aria-pressed="true"]{background:var(--brass);color:#0d1116;border-color:var(--brass)}
 .hint{font-size:12px;color:var(--ink-faint);margin-top:4px;line-height:1.4}
 .resetbtn{background:transparent;border:1px solid var(--line);color:var(--ink-dim);padding:7px 10px;border-radius:var(--radius);font-size:12px;letter-spacing:.06em;text-transform:uppercase;width:100%}
@@ -181,7 +184,8 @@ body.veh .seg button[aria-pressed="true"]{background:var(--brass);color:#0d1116;
 .collapse-head .tw{display:inline-block;font-size:10px;transition:transform .12s}
 .collapse-head.closed .tw{transform:rotate(-90deg)}
 .collapse-head:hover{color:var(--ink)}
-.veh-toggle{margin:0 0 14px;max-width:420px}
+.veh-badges .cfg-seg>label::before{content:none}
+.sec-head .arm-seg{margin-top:12px}
 .sil-seg button{padding:3px 9px;font-size:11px}
 .cr{color:#c3ccd4;white-space:nowrap}
 .gd{color:#e7c15a;white-space:nowrap}
@@ -583,7 +587,7 @@ let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"
            vsBarClosed:false,vsGroupClosed:{},
            mode:"inf",vid:(typeof VEHICLES!=="undefined"?VEHICLES[0].id:null),vweap:0,vAmmoId:null,vModIds:[],
            vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{},silTarget:null,
-           vmg:"none",vcrate:"none",vmgOpen:false,cratesOpen:false};
+           vmg:"none",vcrate:"none",vcrate2:"none",vmgOpen:false,cratesOpen:false};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
 let lastTarget="soldier"; // spread target: soldier (guns) or tank (AT weapons)
 let lastRecoil=true; // whether the recoil pane is shown
@@ -1453,7 +1457,7 @@ function applyMode(m){
 }
 
 function selectVehicle(id){
-  state.vid=id; state.vweap=0; state.vModIds=[]; state.vmg="none"; state.vcrate="none";
+  state.vid=id; state.vweap=0; state.vModIds=[]; state.vmg="none"; state.vcrate="none"; state.vcrate2="none";
   const ws=vehWeapons(curVehicle()); state.vAmmoId = ws.length?ws[0].w.defaultAmmo.id:null;
   renderVehicleDetail();
   document.querySelectorAll("#wpnList .wpn-item").forEach(it=>it.setAttribute("aria-current",it.dataset.vid==id));
@@ -1540,11 +1544,12 @@ function renderVehicleDetail(){
     if(twin) baseSpawn=twin.spawnCost;
   }
   const MG_ADD={none:0,t1:92,t2:180};
-  const crateAdd=(state.vcrate!=="none" && typeof CRATE_COSTS!=="undefined")?(CRATE_COSTS[state.vcrate]||0):0;
+  const crateOf=id=>(id&&id!=="none"&&typeof CRATE_COSTS!=="undefined"&&CRATE_COSTS[id])?CRATE_COSTS[id]:0;
+  const crateAdd=crateOf(state.vcrate)+((v.crateSlots>1)?crateOf(state.vcrate2):0);
   const mgAdd=mountable?MG_ADD[state.vmg]:0;
   const hasSpawn=baseSpawn!=null;
   const spawnVal=hasSpawn?baseSpawn+mgAdd+crateAdd:null;
-  const extras=[]; if(mgAdd) extras.push("+"+(state.vmg==="t1"?"T1 LMG":"T2 LMG")); if(crateAdd) extras.push("+"+state.vcrate+" crate");
+  const extras=[]; if(mgAdd) extras.push("+"+(state.vmg==="t1"?"T1 LMG":"T2 LMG")); if(crateAdd) extras.push("+"+fmt(crateAdd)+" crates");
   const spawnLabel="Spawn cost"+(extras.length?" · "+extras.join(" "):"");
   R.appendChild(group("Mobility &amp; durability",[
     v.hitPoints?cell("Hit points",fmt(v.hitPoints),"hp",{hot:true,w:"n"}):null,
@@ -1560,32 +1565,34 @@ function renderVehicleDetail(){
     v.purchaseCostCredits?cell("Cost to buy",cr(fmt(v.purchaseCostCredits))+" "+gd(fmt(v.purchaseCostGold||0)),"",{w:"w"}):null,
   ].filter(Boolean)));
 
-  // supply-crate selector (adjusts spawn cost); armament selection lives in the ARMAMENT section
-  if(hasSpawn && typeof CRATE_COSTS!=="undefined"){
+  // supply-crate selectors — only crate-capable vehicles; cargo vehicles take two
+  const slots=v.crateSlots||0;
+  const crateCost=id=>(id&&id!=="none"&&typeof CRATE_COSTS!=="undefined"&&CRATE_COSTS[id])?CRATE_COSTS[id]:0;
+  if(hasSpawn && slots>0 && typeof CRATE_COSTS!=="undefined"){
+    const opts=[{id:"none",label:"No crate"},...Object.keys(CRATE_COSTS).map(k=>({id:k,label:k+" ("+CRATE_COSTS[k]+")"}))];
     const load=el("div","veh-badges");
-    const b=el("div","cfg-seg");b.appendChild(el("label",null,"Supply crate"));const sg=el("div","seg wrapseg");b.appendChild(sg);
-    seg(sg,[{id:"none",label:"No crate"},...Object.keys(CRATE_COSTS).map(k=>({id:k,label:k+" ("+CRATE_COSTS[k]+")"}))],state.vcrate,id=>{state.vcrate=id;renderVehicleDetail();});
-    load.appendChild(b); R.appendChild(load);
+    const addCrate=(lbl,cur,set)=>{const b=el("div","cfg-seg");b.appendChild(el("label",null,lbl));const sg=el("div","seg wrapseg");b.appendChild(sg);seg(sg,opts,cur,id=>{set(id);renderVehicleDetail();});load.appendChild(b);};
+    addCrate(slots>1?"Supply crate 1":"Supply crate",state.vcrate,id=>state.vcrate=id);
+    if(slots>1) addCrate("Supply crate 2",state.vcrate2,id=>state.vcrate2=id);
+    R.appendChild(load);
   }
 
   if(!ws.length){ R.appendChild(el("div","hint","This vehicle has no armament.")); return; }
 
   // ===== ARMAMENT section =====
   const wsec=el("div","stat-group sec-head arm-sec"); wsec.appendChild(el("h3",null,"Armament"));
-  const wseg=el("div","seg wrapseg");
+  const wseg=el("div","seg wrapseg arm-seg");
   let vw;
   if(mountable){
-    // No MG (closes the section) + one option per mountable LMG tier; each adjusts spawn cost
-    const noMg=el("button",(state.vmg==="none"?"on":""),"No MG");
-    noMg.onclick=()=>{state.vmg="none";renderVehicleDetail();}; wseg.appendChild(noMg);
-    ws.forEach((x,i)=>{const vmg=i===0?"t1":"t2";const b=el("button",(state.vmg===vmg?"on":""),"Tier "+(i+1)+": "+x.w.name.replace(/\s*Mounted$/,""));
-      b.onclick=()=>{state.vmg=vmg;state.vweap=i;state.vAmmoId=x.w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();};wseg.appendChild(b);});
+    const items=[{id:"none",label:"No MG"}];
+    ws.forEach((x,i)=>items.push({id:(i===0?"t1":"t2"),label:"Tier "+(i+1)+": "+x.w.name.replace(/\s*Mounted$/,"")}));
+    seg(wseg,items,state.vmg,id=>{ state.vmg=id; if(id!=="none"){const idx=id==="t1"?0:Math.min(1,ws.length-1);state.vweap=idx;state.vAmmoId=ws[idx].w.defaultAmmo.id;state.vModIds=[];} renderVehicleDetail(); });
     wsec.appendChild(wseg); R.appendChild(wsec);
-    if(state.vmg==="none"){ if(C)C.innerHTML=""; return; } // no armament → section closed up
+    if(state.vmg==="none"){ if(C)C.innerHTML=""; R.appendChild(el("div","hint","No armament mounted — spawn cost shown is the base cost.")); return; } // no armament → section closed up
     const idx=state.vmg==="t1"?0:Math.min(1,ws.length-1);
     vw=ws[idx].w; if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
   } else {
-    ws.forEach((x,i)=>{const b=el("button",(i===state.vweap?"on":""),x.label);b.onclick=()=>{state.vweap=i;state.vAmmoId=x.w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();};wseg.appendChild(b);});
+    seg(wseg,ws.map((x,i)=>({id:String(i),label:x.label})),String(Math.min(state.vweap,ws.length-1)),id=>{const i=+id;state.vweap=i;state.vAmmoId=ws[i].w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();});
     wsec.appendChild(wseg); R.appendChild(wsec);
     vw=ws[Math.min(state.vweap,ws.length-1)].w;
     if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
