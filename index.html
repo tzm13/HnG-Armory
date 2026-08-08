@@ -162,6 +162,9 @@ body.veh .seg button.on{color:#0d1116}
 .vsub{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px}
 .vsub>h4{font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--brass);margin:0 0 8px}
 .vsub .cell{max-width:none;min-width:0}
+.vs-vehcfg{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.vs-vehsel{width:100%;font-size:12px;padding:5px 6px;background:#0f161b;color:var(--ink);border:1px solid var(--line);border-radius:var(--radius)}
+.vs-colname{font-family:"Oswald";text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--ink-dim)}
 @media(max-width:900px){.vsub-grid{grid-template-columns:1fr}}
 body.veh .seg button[aria-pressed="true"]{background:var(--brass);color:#0d1116;border-color:var(--brass)}
 .hint{font-size:12px;color:var(--ink-faint);margin-top:4px;line-height:1.4}
@@ -593,7 +596,8 @@ let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"
            vsBarClosed:false,vsGroupClosed:{},
            mode:"inf",vid:(typeof VEHICLES!=="undefined"?VEHICLES[0].id:null),vweap:0,vAmmoId:null,vModIds:[],
            vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{},silTarget:null,
-           vmg:"none",vcrate:"none",vcrate2:"none",vmgOpen:false,cratesOpen:false,vsort:{key:"name",dir:1}};
+           vmg:"none",vcrate:"none",vcrate2:"none",vmgOpen:false,cratesOpen:false,vsort:{key:"name",dir:1},
+           vversus:[],vvs:{heavyset:"none",gunner:"none",grenadier:"none"},vvsBarClosed:false,vvsGroupClosed:{}};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
 let lastTarget="soldier"; // spread target: soldier (guns) or tank (AT weapons)
 let lastRecoil=true; // whether the recoil pane is shown
@@ -1722,6 +1726,199 @@ function renderVehicleTable(){
   });
   t.appendChild(tb);
 }
+
+// ---------- Vehicle comparison ----------
+const VVS_GROUPS=[
+  {title:"Vehicle",rows:[
+    {label:"Hit points",get:c=>c.v.hitPoints||0,better:"up"},
+    {label:"Effective armor",get:c=>(c.v.hitPoints||0)*(c.v.armorHPMul||0),better:"up"},
+    {label:"Top speed",get:c=>c.v.speed||0,unit:"km/h",better:"up"},
+    {label:"Mass",get:c=>(c.v.mass||0)/1000,dd:1,unit:"t",better:"down"},
+    {label:"Spawn cost",get:c=>c.v.spawnCost==null?Infinity:c.v.spawnCost,disp:c=>c.v.spawnCost==null?"\u2014":cr(fmt(c.v.spawnCost)),better:"down"},
+  ]},
+  {title:"Anti-armor",rows:[
+    {label:"Armor damage",get:c=>c.s?(c.s.armorMin+c.s.armorMax)/2:0,disp:c=>c.s?fmt(c.s.armorMin)+"\u2013"+fmt(c.s.armorMax):"\u2014",better:"up"},
+    {label:"Armor DPS",get:c=>c.s?c.s.armorDPS:0,better:"up"},
+    {label:"Pen near",get:c=>c.s?(c.s.penMin+c.s.penMax)/2:0,disp:c=>c.s?fmt(c.s.penMin,0)+"\u2013"+fmt(c.s.penMax,0):"\u2014",unit:"mm",better:"up"},
+    {label:"Pen far",get:c=>c.s?(c.s.penFarMin+c.s.penFarMax)/2:0,disp:c=>c.s?fmt(c.s.penFarMin,0)+"\u2013"+fmt(c.s.penFarMax,0):"\u2014",unit:"mm",better:"up"},
+    {label:"Pen angle",get:c=>c.s&&c.s.ammo.armorPenetrationAngle!=null?c.s.ammo.armorPenetrationAngle:0,disp:c=>c.s&&c.s.ammo.armorPenetrationAngle!=null?fmt(c.s.ammo.armorPenetrationAngle,0):"\u2014",unit:"\u00b0",better:"up"},
+  ]},
+  {title:"Anti-infantry",rows:[
+    {label:"Rate of fire",get:c=>c.s?c.s.rpm:0,unit:"rpm",better:"up"},
+    {label:"Reload",get:c=>c.s?c.s.reload:0,dd:1,disp:c=>c.s?fmt(c.s.reload,1):"\u2014",unit:"s",better:"down"},
+    {label:"Damage",get:c=>c.s?c.s.effNear:0,disp:c=>c.s?fmt(c.s.effNear,0)+" \u2192 "+fmt(c.s.effFar,0):"\u2014",unit:"hp",better:"up"},
+    {label:"Damage / s",get:c=>c.s?c.s.effDpsNear:0,disp:c=>c.s?fmt(c.s.effDpsNear,0)+" \u2192 "+fmt(c.s.effDpsFar,0):"\u2014",unit:"hp/s",better:"up"},
+    {label:"Explosion",get:c=>c.s&&c.s.ammo.explosiondamage?Math.floor(c.s.ammo.explosiondamage*vvsGren()):0,disp:c=>c.s&&c.s.ammo.explosiondamage?fmt(Math.floor(c.s.ammo.explosiondamage*vvsGren())):"\u2014",unit:"hp",better:"up"},
+    {label:"Kill range",get:c=>vvsKillR(c),dd:2,disp:c=>{const k=vvsKillR(c);return k>0?fmt(k,2):"\u2014";},unit:"m",better:"up"},
+  ]},
+  {title:"Ballistics",rows:[
+    {label:"Velocity",get:c=>c.s?c.s.velocity:0,unit:"m/s",better:"up"},
+    {label:"Range",get:c=>c.s?c.s.rFar:0,disp:c=>c.s?fmt(c.s.rNear,0)+" \u2192 "+fmt(c.s.rFar,0):"\u2014",unit:"m",better:"up"},
+    {label:"Cone of fire",get:c=>c.s?c.s.cone:0,dd:3,unit:"\u00b0",better:"down"},
+  ]},
+  {title:"Economy",rows:[
+    {label:"Cost per shot",get:c=>vvsShot(c).n,disp:c=>vvsShot(c).d,better:"down"},
+    {label:"Cost to buy",get:c=>c.v.purchaseCostCredits||0,disp:c=>c.v.purchaseCostCredits?cr(fmt(c.v.purchaseCostCredits)):"\u2014",better:"down"},
+  ]},
+];
+function vvsGren(){return (GRENADIER.find(x=>x.id===state.vvs.grenadier)||{mult:1}).mult;}
+function vvsKillR(c){ if(!c.s||!c.s.ammo.explosiondamage)return 0; const ed=Math.floor(c.s.ammo.explosiondamage*vvsGren()), r=c.s.ammo.explosionradius||0; return (ed>TARGET_HP&&r>0)?r*(1-TARGET_HP/ed):0; }
+function vvsShot(c){
+  if(!c.s) return {n:Infinity,d:"\u2014"};
+  const freeFire=(typeof VEHICLE_FREE_FIRE_CATEGORIES!=="undefined")&&VEHICLE_FREE_FIRE_CATEGORIES.includes(c.v.category);
+  if(freeFire||c.main===false) return {n:0,d:"Free"};
+  const cost=(typeof AMMO_COST!=="undefined")?AMMO_COST[c.v.id+":"+c.ammoId]:null;
+  return cost!=null?{n:cost,d:cr(fmt(cost,2))}:{n:Infinity,d:"\u2014"};
+}
+function vehVersusCols(){
+  return state.vversus.map((e,i)=>{
+    if(!e) return null;
+    const v=VEHICLES.find(x=>x.id===e.vid); if(!v) return null;
+    const ws=vehWeapons(v);
+    if(!ws.length) return {v,vw:null,s:null,ammoId:null,main:false,color:VS_PALETTE[i],i};
+    const idx=Math.min(e.vweap||0,ws.length-1), vw=ws[idx].w, ammoId=e.ammoId||vw.defaultAmmo.id;
+    const s=compute(vw,{ammoId,modIds:[],hitbox:"torso",heavyset:state.vvs.heavyset,fastReload:"none",ironFist:"none",grenadier:"none",gunner:state.vvs.gunner,stance:"stand"});
+    return {v,vw,s,ammoId,main:ws[idx].main,color:VS_PALETTE[i],i};
+  });
+}
+function vehColConfig(i,entry){
+  const wrap=el("div","vs-vehcfg");
+  // vehicle select grouped by category
+  const vsel=el("select","vs-vehsel");
+  const none=el("option",null,entry?"\u2014 change \u2014":"\u2014 pick vehicle \u2014"); none.value=""; vsel.appendChild(none);
+  VEHICLE_CATEGORY_ORDER.forEach(cat=>{
+    const inCat=VEHICLES.filter(v=>v.category===cat); if(!inCat.length)return;
+    const og=el("optgroup"); og.label=cat;
+    inCat.forEach(v=>{const o=el("option",null,v.name);o.value=v.id;if(entry&&v.id===entry.vid)o.selected=true;og.appendChild(o);});
+    vsel.appendChild(og);
+  });
+  vsel.onchange=()=>{const id=vsel.value?+vsel.value:null; if(id==null){state.vversus[i]=null;} else {const v=VEHICLES.find(x=>x.id===id),ws=vehWeapons(v);state.vversus[i]={vid:id,vweap:0,ammoId:ws.length?ws[0].w.defaultAmmo.id:null};} renderVehicleVersus();};
+  wrap.appendChild(vsel);
+  if(entry){
+    const v=VEHICLES.find(x=>x.id===entry.vid), ws=v?vehWeapons(v):[];
+    if(ws.length>1){
+      const wsel=el("select","vs-vehsel");
+      ws.forEach((x,k)=>{const o=el("option",null,x.label);o.value=k;if(k===(entry.vweap||0))o.selected=true;wsel.appendChild(o);});
+      wsel.onchange=()=>{const k=+wsel.value;entry.vweap=k;entry.ammoId=ws[k].w.defaultAmmo.id;renderVehicleVersus();};
+      wrap.appendChild(wsel);
+    }
+    if(ws.length){
+      const vw=ws[Math.min(entry.vweap||0,ws.length-1)].w, ammo=[vw.defaultAmmo,...(vw.ammunition||[])];
+      if(ammo.length>1){
+        const asel=el("select","vs-vehsel");
+        ammo.forEach((a,k)=>{const o=el("option",null,a.name+(k===0?" (default)":""));o.value=a.id;if(a.id===(entry.ammoId||vw.defaultAmmo.id))o.selected=true;asel.appendChild(o);});
+        asel.onchange=()=>{entry.ammoId=+asel.value;renderVehicleVersus();};
+        wrap.appendChild(asel);
+      }
+    }
+  }
+  return wrap;
+}
+function renderVehicleVersus(){
+  const host=$("#versusView"); host.innerHTML="";
+  if(!state.vversus) state.vversus=[];
+  if(!state.vversus.filter(Boolean).length){
+    const armed=VEHICLES.filter(v=>v.mainWeapon&&v.mainWeapon.defaultAmmo);
+    [0,1].forEach(k=>{const v=armed[k];if(v)state.vversus[k]={vid:v.id,vweap:0,ammoId:v.mainWeapon.defaultAmmo.id};});
+  }
+  // scenario badges
+  const barWrap=el("div","vs-presetwrap"+(state.vvsBarClosed?" closed":""));
+  const barHead=el("div","vs-presethead",'<span>Scenario &amp; badges</span><span class="cur">\u25be</span>');
+  barHead.onclick=()=>{state.vvsBarClosed=!state.vvsBarClosed;renderVehicleVersus();};
+  barWrap.appendChild(barHead);
+  const bar=el("div","vs-presets");
+  const addSeg=(lbl,items,cur,set)=>{const b=el("div","vs-preset");b.appendChild(el("label",null,lbl));const sg=el("div","seg");b.appendChild(sg);seg(sg,items,cur,id=>{set(id);renderVehicleVersus();});bar.appendChild(b);};
+  addSeg("Enemy Heavy Set",HEAVYSET,state.vvs.heavyset,id=>state.vvs.heavyset=id);
+  addSeg("Gunner",GUNNER,state.vvs.gunner,id=>state.vvs.gunner=id);
+  addSeg("Grenadier",GRENADIER,state.vvs.grenadier,id=>state.vvs.grenadier=id);
+  barWrap.appendChild(bar); host.appendChild(barWrap);
+
+  const cols=vehVersusCols().filter(Boolean);
+
+  const t=el("table","vs-table");
+  const cg=el("colgroup"); cg.appendChild(el("col","vs-col-lbl")); [0,1,2].forEach(()=>cg.appendChild(el("col","vs-col"))); t.appendChild(cg);
+  const thead=el("thead"), htr=el("tr"); htr.appendChild(el("th","vs-lbl",""));
+  [0,1,2].forEach(i=>{
+    const entry=state.vversus[i], th=el("th","vs-head");
+    const top=el("div","vs-picktop"); const dot=el("span","vs-dot"); dot.style.background=VS_PALETTE[i]; top.appendChild(dot);
+    top.appendChild(el("span","vs-colname",entry?"Slot "+(i+1):"Slot "+(i+1)));
+    th.appendChild(top); th.appendChild(vehColConfig(i,entry)); htr.appendChild(th);
+  });
+  thead.appendChild(htr); t.appendChild(thead);
+
+  if(cols.length<2){ t.appendChild(el("tbody")); host.appendChild(t); host.appendChild(el("div","hint","Select at least two vehicles to compare.")); return; }
+
+  const tb=el("tbody");
+  VVS_GROUPS.forEach(g=>{
+    const closed=state.vvsGroupClosed[g.title]===true;
+    const gtr=el("tr","vs-grouprow"+(closed?" closed":"")); const gtd=el("td","vs-grouplbl"); gtd.colSpan=1+cols.length;
+    gtd.innerHTML='<span class="cur">\u25be</span> '+g.title; gtr.appendChild(gtd); tb.appendChild(gtr);
+    gtr.onclick=()=>{state.vvsGroupClosed[g.title]=!closed;renderVehicleVersus();};
+    if(closed)return;
+    g.rows.forEach(row=>{
+      const tr=el("tr"); tr.appendChild(el("td","vs-lbl",row.label));
+      const vals=cols.map(row.get);
+      const finite=vals.filter(x=>isFinite(x));
+      let best=null; if(finite.length)best=row.better==="up"?Math.max(...finite):Math.min(...finite);
+      cols.forEach((c,ci)=>{
+        const v=vals[ci], td=el("td");
+        td.innerHTML=(row.disp?row.disp(c):fmt(v,row.dd))+(row.unit?' <small>'+row.unit+'</small>':"");
+        if(best!=null&&isFinite(v)&&Math.abs(v-best)<1e-6)td.classList.add("vs-win");
+        tr.appendChild(td);
+      });
+      for(let k=cols.length;k<3;k++)tr.appendChild(el("td","vs-empty",""));
+      tb.appendChild(tr);
+    });
+  });
+  t.appendChild(tb);
+
+  const area=el("div","vs-area");
+  const tw=el("div","vs-tablewrap"); tw.appendChild(t); area.appendChild(tw);
+  const armed=cols.filter(c=>c.s);
+  const charts=el("div","vs-charts"); charts.appendChild(el("div","curves-title","Combat curves"));
+  if(armed.length>=2){
+    const sers=armed.map(c=>({name:c.v.name,color:c.color,s:c.s}));
+    const box=el("div","chartwrap");
+    box.appendChild(el("div","chart-legend",
+      sers.map(x=>'<span class="k"><span class="sw" style="background:'+x.color+'"></span>'+x.name+'</span>').join("")+
+      '<span class="k" style="color:var(--ink-faint)">vs distance \u00b7 armor damage &amp; penetration</span>'));
+    const grid=el("div","mini-grid");
+    grid.appendChild(vehVersusChart(sers,{mode:"armor",title:"Armor damage"}));
+    grid.appendChild(vehVersusChart(sers,{mode:"pen",title:"Armor pen (mm)"}));
+    box.appendChild(grid); charts.appendChild(box);
+  } else { charts.appendChild(el("div","hint","Pick armed vehicles to see armor curves.")); }
+  area.appendChild(charts); host.appendChild(area);
+}
+function vehVersusChart(series,opts={}){
+  const mode=opts.mode||"armor";
+  const valAt=(s,d)=>{
+    const a=s.ammo, nr=s.penNearRange||0, fr=s.penFarRange||Math.max(nr*2,100);
+    if(mode==="armor"){
+      const dFar=(a.armorDamageFarPercent!=null)?a.armorDamageFarPercent:1;
+      const full=(s.armorMin+s.armorMax)/2, far=full*dFar;
+      if(fr<=nr||d<=nr)return full; if(d>=fr)return far; return full+(far-full)*(d-nr)/(fr-nr);
+    } else {
+      const full=(s.penMin+s.penMax)/2, far=(s.penFarMin+s.penFarMax)/2;
+      if(fr<=nr||d<=nr)return full; if(d>=fr)return far; return full+(far-full)*(d-nr)/(fr-nr);
+    }
+  };
+  const W=396,H=214,pad={l:44,r:8,t:10,b:24}, iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
+  const rawMaxD=Math.max(...series.map(x=>x.s.penFarRange||300))*1.2||300;
+  const xStep=niceStep(Math.max(rawMaxD,60),6), maxD=Math.ceil(rawMaxD/xStep)*xStep;
+  let peak=0; series.forEach(x=>{for(let d=0;d<=maxD;d+=maxD/60)peak=Math.max(peak,valAt(x.s,d));});
+  const yStep=niceStep(Math.max(peak,1),5), yMax=Math.max(yStep,Math.ceil(peak/yStep)*yStep);
+  const X=d=>pad.l+(d/maxD)*iw, Y=v=>pad.t+ih-(Math.min(v,yMax)/yMax)*ih;
+  const decOf=st=>st>=1?0:Math.min(2,Math.ceil(-Math.log10(st))||0);
+  const ydec=decOf(yStep), xdec=decOf(xStep), fx=(v,dc)=>Number(v.toFixed(dc)).toFixed(dc);
+  let grid="";
+  for(let i=0;i*yStep<=yMax+1e-4;i++){const v=i*yStep;grid+='<line x1="'+pad.l+'" y1="'+Y(v)+'" x2="'+(W-pad.r)+'" y2="'+Y(v)+'" stroke="#ffffff0e"/><text x="'+(pad.l-5)+'" y="'+(Y(v)+4)+'" fill="#8a8770" font-size="12" text-anchor="end" font-family="JetBrains Mono">'+fx(v,ydec)+'</text>';}
+  for(let i=0;i*xStep<=maxD+1e-4;i++){const d=i*xStep;grid+='<text x="'+X(d)+'" y="'+(H-8)+'" fill="#8a8770" font-size="12" text-anchor="middle" font-family="JetBrains Mono">'+fx(d,xdec)+'</text>';}
+  const lines=series.map(x=>{let p=[];for(let d=0;d<=maxD;d+=maxD/200)p.push(X(d).toFixed(1)+","+Y(valAt(x.s,d)).toFixed(1));return '<polyline points="'+p.join(" ")+'" fill="none" stroke="'+x.color+'" stroke-width="2.5"/>';}).join("");
+  const svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet">'+grid+lines+'</svg>';
+  const box=el("div","mini-chart"); box.innerHTML='<div class="mini-title">'+opts.title+'</div><div class="mc-plot">'+svg+'</div>';
+  return box;
+}
+
 function syncTabs(){
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute("aria-selected",b.dataset.view===state.view));
   $("#detailView").classList.toggle("hidden",state.view!=="detail");
@@ -1729,7 +1926,7 @@ function syncTabs(){
   $("#versusView").classList.toggle("active",state.view==="versus");
   if(state.mode==="veh"){
     if(state.view==="table"){ renderVehicleTable(); }
-    else if(state.view==="versus"){$("#versusView").innerHTML='<div class="notice">Vehicle comparison is coming next.</div>';}
+    else if(state.view==="versus"){ renderVehicleVersus(); }
     else renderVehicleDetail();
     return;
   }
