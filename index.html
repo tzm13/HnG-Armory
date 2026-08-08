@@ -1453,7 +1453,7 @@ function applyMode(m){
 }
 
 function selectVehicle(id){
-  state.vid=id; state.vweap=0; state.vModIds=[];
+  state.vid=id; state.vweap=0; state.vModIds=[]; state.vmg="none"; state.vcrate="none";
   const ws=vehWeapons(curVehicle()); state.vAmmoId = ws.length?ws[0].w.defaultAmmo.id:null;
   renderVehicleDetail();
   document.querySelectorAll("#wpnList .wpn-item").forEach(it=>it.setAttribute("aria-current",it.dataset.vid==id));
@@ -1560,13 +1560,12 @@ function renderVehicleDetail(){
     v.purchaseCostCredits?cell("Cost to buy",cr(fmt(v.purchaseCostCredits))+" "+gd(fmt(v.purchaseCostGold||0)),"",{w:"w"}):null,
   ].filter(Boolean)));
 
-  // spawn-loadout selectors (styled like the badge row) — each adjusts the spawn cost
-  if(hasSpawn){
+  // supply-crate selector (adjusts spawn cost); armament selection lives in the ARMAMENT section
+  if(hasSpawn && typeof CRATE_COSTS!=="undefined"){
     const load=el("div","veh-badges");
-    const addSel=(lbl,items,cur,set)=>{const b=el("div","cfg-seg");b.appendChild(el("label",null,lbl));const sg=el("div","seg wrapseg");b.appendChild(sg);seg(sg,items,cur,id=>{set(id);renderVehicleDetail();});load.appendChild(b);};
-    if(mountable) addSel("Mounted armament",[{id:"none",label:"No MG"},{id:"t1",label:"Tier 1 LMG"},{id:"t2",label:"Tier 2 LMG"}],state.vmg,id=>state.vmg=id);
-    if(typeof CRATE_COSTS!=="undefined") addSel("Supply crate",[{id:"none",label:"No crate"},...Object.keys(CRATE_COSTS).map(k=>({id:k,label:k+" ("+CRATE_COSTS[k]+")"}))],state.vcrate,id=>state.vcrate=id);
-    R.appendChild(load);
+    const b=el("div","cfg-seg");b.appendChild(el("label",null,"Supply crate"));const sg=el("div","seg wrapseg");b.appendChild(sg);
+    seg(sg,[{id:"none",label:"No crate"},...Object.keys(CRATE_COSTS).map(k=>({id:k,label:k+" ("+CRATE_COSTS[k]+")"}))],state.vcrate,id=>{state.vcrate=id;renderVehicleDetail();});
+    load.appendChild(b); R.appendChild(load);
   }
 
   if(!ws.length){ R.appendChild(el("div","hint","This vehicle has no armament.")); return; }
@@ -1574,11 +1573,24 @@ function renderVehicleDetail(){
   // ===== ARMAMENT section =====
   const wsec=el("div","stat-group sec-head arm-sec"); wsec.appendChild(el("h3",null,"Armament"));
   const wseg=el("div","seg wrapseg");
-  ws.forEach((x,i)=>{const b=el("button",(i===state.vweap?"on":""),x.label);b.onclick=()=>{state.vweap=i;state.vAmmoId=x.w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();};wseg.appendChild(b);});
-  wsec.appendChild(wseg); R.appendChild(wsec);
+  let vw;
+  if(mountable){
+    // No MG (closes the section) + one option per mountable LMG tier; each adjusts spawn cost
+    const noMg=el("button",(state.vmg==="none"?"on":""),"No MG");
+    noMg.onclick=()=>{state.vmg="none";renderVehicleDetail();}; wseg.appendChild(noMg);
+    ws.forEach((x,i)=>{const vmg=i===0?"t1":"t2";const b=el("button",(state.vmg===vmg?"on":""),"Tier "+(i+1)+": "+x.w.name.replace(/\s*Mounted$/,""));
+      b.onclick=()=>{state.vmg=vmg;state.vweap=i;state.vAmmoId=x.w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();};wseg.appendChild(b);});
+    wsec.appendChild(wseg); R.appendChild(wsec);
+    if(state.vmg==="none"){ if(C)C.innerHTML=""; return; } // no armament → section closed up
+    const idx=state.vmg==="t1"?0:Math.min(1,ws.length-1);
+    vw=ws[idx].w; if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
+  } else {
+    ws.forEach((x,i)=>{const b=el("button",(i===state.vweap?"on":""),x.label);b.onclick=()=>{state.vweap=i;state.vAmmoId=x.w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();};wseg.appendChild(b);});
+    wsec.appendChild(wseg); R.appendChild(wsec);
+    vw=ws[Math.min(state.vweap,ws.length-1)].w;
+    if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
+  }
 
-  const vw=ws[Math.min(state.vweap,ws.length-1)].w;
-  if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
   // config bar: ammunition + Gunner + Grenadier badges
   const cfgbar=el("div","veh-cfg");
   cfgbar.appendChild(el("div","cfg-divider","Loadout"));
