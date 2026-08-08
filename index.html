@@ -593,7 +593,7 @@ let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"
            vsBarClosed:false,vsGroupClosed:{},
            mode:"inf",vid:(typeof VEHICLES!=="undefined"?VEHICLES[0].id:null),vweap:0,vAmmoId:null,vModIds:[],
            vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{},silTarget:null,
-           vmg:"none",vcrate:"none",vcrate2:"none",vmgOpen:false,cratesOpen:false};
+           vmg:"none",vcrate:"none",vcrate2:"none",vmgOpen:false,cratesOpen:false,vsort:{key:"name",dir:1}};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
 let lastTarget="soldier"; // spread target: soldier (guns) or tank (AT weapons)
 let lastRecoil=true; // whether the recoil pane is shown
@@ -1658,8 +1658,8 @@ function renderVehicleDetail(){
     cell("Rate of fire",fmt(s.rpm),"rpm",{hot:true,w:"n"}),
     cell("Reload",fmt(s.reload,1),"s",{delta:s.reload-b.reload,dd:1,betterWhenUp:false,w:"n"}),
     cell("Magazine",s.mag,"rds",{w:"n"}),
-    cell("Damage",fmt(s.dmgNear)+" → "+fmt(s.dmgFar),"hp",{hot:true,w:"w"}),
-    cell("Damage / s",fmt(s.dpsNear)+" → "+fmt(s.dpsFar),"hp/s",{w:"w"}),
+    cell("Damage"+(state.vheavyset!=="none"?" · HS "+state.vheavyset:""),fmt(s.effNear,0)+" → "+fmt(s.effFar,0),"hp",{hot:true,w:"w"}),
+    cell("Damage / s",fmt(s.effDpsNear,0)+" → "+fmt(s.effDpsFar,0),"hp/s",{w:"w"}),
     explDmg?cell("Explosion dmg",fmt(explDmg),"hp",{hot:true,w:"n"}):null,
     radius?cell("Blast radius",fmt(radius,1),"m",{w:"n"}):null,
     explDmg&&radius?cell("Kill range",fmt(killR,2),"m",{kill:true,w:"n"}):null,
@@ -1683,13 +1683,52 @@ function renderVehicleDetail(){
   updateSpread();
 }
 
+const VCOLS=[
+  {k:"name",label:"Vehicle",num:false,get:(v,s)=>v.name},
+  {k:"category",label:"Class",num:false,get:(v,s)=>v.category},
+  {k:"gun",label:"Main weapon",num:false,get:(v,s)=>v.mainWeapon?v.mainWeapon.name:"\u2014"},
+  {k:"hp",label:"HP",get:(v,s)=>v.hitPoints||0},
+  {k:"armor",label:"Eff. armor",get:(v,s)=>(v.hitPoints||0)*(v.armorHPMul||0)},
+  {k:"speed",label:"km/h",get:(v,s)=>v.speed||0},
+  {k:"pen",label:"Pen mm",get:(v,s)=>s?s.penMax:0},
+  {k:"admg",label:"Armor dmg",get:(v,s)=>s?s.armorMax:0},
+  {k:"spawn",label:"Spawn cr",get:(v,s)=>v.spawnCost==null?-1:v.spawnCost},
+];
+function vehMainStats(v){
+  const w=v.mainWeapon;
+  if(!w||!(w.defaultAmmo||w.ammunition)) return null;
+  return compute(w,{ammoId:w.defaultAmmo.id,modIds:[],hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",gunner:"none",stance:"stand"});
+}
+function renderVehicleTable(){
+  const rows=VEHICLES.map(v=>({v,s:vehMainStats(v)}));
+  const {key,dir}=state.vsort, col=VCOLS.find(c=>c.k===key)||VCOLS[0];
+  rows.sort((a,b)=>{const av=col.get(a.v,a.s),bv=col.get(b.v,b.s);return (typeof av==="string"?av.localeCompare(bv):av-bv)*dir;});
+  const t=$("#cmpTable"); t.innerHTML="";
+  const trh=el("tr");
+  VCOLS.forEach(c=>{const th=el("th",null,c.label);if(c.k===key)th.setAttribute("aria-sort",dir>0?"ascending":"descending");
+    th.onclick=()=>{state.vsort=state.vsort.key===c.k?{key:c.k,dir:-dir}:{key:c.k,dir:c.num===false?1:-1};renderVehicleTable();};trh.appendChild(th);});
+  const thead=el("thead"); thead.appendChild(trh); t.appendChild(thead);
+  const tb=el("tbody");
+  rows.forEach(({v,s})=>{
+    const fac=FACTIONS[v.factiontemplateid]||{color:"#888"}, r=el("tr");
+    VCOLS.forEach(c=>{let val=c.get(v,s);
+      if(c.k==="name")val=`<span class="faction-dot" style="background:${fac.color}"></span>${val}`;
+      else if(c.k==="spawn")val=(v.spawnCost==null?"\u2014":fmt(v.spawnCost));
+      else if(c.k==="pen"||c.k==="admg")val=(s?fmt(val):"\u2014");
+      else if(c.num!==false)val=fmt(val);
+      r.appendChild(el("td",null,val));});
+    r.onclick=()=>{state.view="detail";selectVehicle(v.id);syncTabs();};
+    tb.appendChild(r);
+  });
+  t.appendChild(tb);
+}
 function syncTabs(){
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute("aria-selected",b.dataset.view===state.view));
   $("#detailView").classList.toggle("hidden",state.view!=="detail");
   $("#tableView").classList.toggle("active",state.view==="table");
   $("#versusView").classList.toggle("active",state.view==="versus");
   if(state.mode==="veh"){
-    if(state.view==="table"){$("#tableView").innerHTML='<div class="notice">Vehicle list view is coming next. Use the sidebar to browse vehicles for now.</div>';}
+    if(state.view==="table"){ renderVehicleTable(); }
     else if(state.view==="versus"){$("#versusView").innerHTML='<div class="notice">Vehicle comparison is coming next.</div>';}
     else renderVehicleDetail();
     return;
