@@ -177,6 +177,11 @@ body.veh .seg button[aria-pressed="true"]{background:var(--brass);color:#0d1116;
 .sec-head h3{color:var(--brass);font-size:19px;letter-spacing:.16em;text-transform:uppercase;
   border-bottom:2px solid var(--brass);padding-bottom:6px;margin:0}
 .arm-sec{border-top:2px solid var(--line);padding-top:20px;margin-top:22px}
+.collapse-head{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
+.collapse-head .tw{display:inline-block;font-size:10px;transition:transform .12s}
+.collapse-head.closed .tw{transform:rotate(-90deg)}
+.collapse-head:hover{color:var(--ink)}
+.veh-toggle{margin:0 0 14px;max-width:420px}
 .sil-seg button{padding:3px 9px;font-size:11px}
 .cr{color:#c3ccd4;white-space:nowrap}
 .gd{color:#e7c15a;white-space:nowrap}
@@ -577,7 +582,8 @@ let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"
            vs:{hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"},
            vsBarClosed:false,vsGroupClosed:{},
            mode:"inf",vid:(typeof VEHICLES!=="undefined"?VEHICLES[0].id:null),vweap:0,vAmmoId:null,vModIds:[],
-           vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{},silTarget:null};
+           vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{},silTarget:null,
+           vmg:"none",vmgOpen:false,cratesOpen:false};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
 let lastTarget="soldier"; // spread target: soldier (guns) or tank (AT weapons)
 let lastRecoil=true; // whether the recoil pane is shown
@@ -1524,20 +1530,15 @@ function renderVehicleDetail(){
   // Only sidecar bikes can mount an LMG. They spawn for the same base as the plain bike,
   // and mounting raises it: Tier 1 LMG +92, Tier 2 LMG (or .50 cal for US/SU) +180.
   const mountable = v.category==="Motorbikes" && /sidecar/i.test(v.name);
-  // sidecar bikes carry no spawnCost of their own — borrow the plain bike's
   let baseSpawn=v.spawnCost;
   if(mountable && baseSpawn==null){
     const plain=v.name.replace(/\s*with\s*sidecar/i,"").trim().toLowerCase();
     const twin=VEHICLES.find(x=>x.name.toLowerCase()===plain && x.spawnCost!=null);
     if(twin) baseSpawn=twin.spawnCost;
   }
-  const spawnCells = mountable ? (baseSpawn!=null?[
-    cell("Spawn cost · base",cr(fmt(baseSpawn)),"",{hot:true,w:"n"}),
-    cell("· + Tier 1 LMG",cr(fmt(baseSpawn+92)),"",{w:"n"}),
-    cell("· + Tier 2 LMG",cr(fmt(baseSpawn+180)),"",{w:"n"}),
-  ]:[]) : ((v.spawnCost!=null)?[
-    cell("Spawn cost",cr(fmt(v.spawnCost)),"",{hot:true,w:"n"}),
-  ]:[]);
+  const MG_ADD={none:0,t1:92,t2:180};
+  const spawnVal = mountable ? (baseSpawn!=null?baseSpawn+MG_ADD[state.vmg]:null) : v.spawnCost;
+  const spawnLabel = mountable ? ("Spawn cost"+(state.vmg==="none"?"":" · +"+(state.vmg==="t1"?"T1 LMG":"T2 LMG"))) : "Spawn cost";
   R.appendChild(group("Mobility &amp; durability",[
     v.hitPoints?cell("Hit points",fmt(v.hitPoints),"hp",{hot:true,w:"n"}):null,
     v.armorHPMul?cell("Armor mult",fmt(v.armorHPMul,0),"×",{w:"n"}):null,
@@ -1547,13 +1548,33 @@ function renderVehicleDetail(){
     v.reverseSpeedKPH?cell("Reverse",fmt(v.reverseSpeedKPH),"km/h",{w:"n"}):null,
     v.mass?cell("Mass",fmt(v.mass/1000,1),"t",{w:"n"}):null,
     v.fuelCapacity?cell("Fuel",fmt(v.fuelCapacity),"L",{w:"n"}):null,
-    ...spawnCells,
+    (spawnVal!=null)?cell(spawnLabel,cr(fmt(spawnVal)),"",{hot:true,w:"n"}):null,
     v.deployPoolCost?cell("Deploy pool",fmt(v.deployPoolCost),"",{w:"n"}):null,
     v.purchaseCostCredits?cell("Cost to buy",cr(fmt(v.purchaseCostCredits))+" "+gd(fmt(v.purchaseCostGold||0)),"",{w:"w"}):null,
   ].filter(Boolean)));
+
+  // mountable sidecar bikes: LMG toggle that drives the spawn cost
+  if(mountable){
+    const open=state.vmgOpen;
+    const mh=el("div","cfg-divider collapse-head"+(open?"":" closed"),`<span class="tw">▾</span>Mounted LMG`);
+    mh.onclick=()=>{state.vmgOpen=!state.vmgOpen;renderVehicleDetail();};
+    R.appendChild(mh);
+    if(open){
+      const row=el("div","veh-toggle"); const sg=el("div","seg");
+      seg(sg,[{id:"none",label:"No MG"},{id:"t1",label:"Tier 1 LMG (+92)"},{id:"t2",label:"Tier 2 LMG (+180)"}],state.vmg,id=>{state.vmg=id;renderVehicleDetail();});
+      row.appendChild(sg); R.appendChild(row);
+    }
+  }
+
+  // collapsible supply-crate menu
   if(typeof CRATE_COSTS!=="undefined"){
-    R.appendChild(group("Supply crates · cost per use",
-      Object.keys(CRATE_COSTS).map(k=>cell(k,cr(fmt(CRATE_COSTS[k])),"",{w:"n"}))));
+    const open=state.cratesOpen;
+    const ch=el("div","cfg-divider collapse-head"+(open?"":" closed"),`<span class="tw">▾</span>Supply crates · cost per use`);
+    ch.onclick=()=>{state.cratesOpen=!state.cratesOpen;renderVehicleDetail();};
+    R.appendChild(ch);
+    if(open){
+      const g=el("div","grid"); Object.keys(CRATE_COSTS).forEach(k=>g.appendChild(cell(k,cr(fmt(CRATE_COSTS[k])),"",{w:"n"}))); R.appendChild(g);
+    }
   }
 
   if(!ws.length){ R.appendChild(el("div","hint","This vehicle has no armament.")); return; }
