@@ -583,7 +583,7 @@ let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"
            vsBarClosed:false,vsGroupClosed:{},
            mode:"inf",vid:(typeof VEHICLES!=="undefined"?VEHICLES[0].id:null),vweap:0,vAmmoId:null,vModIds:[],
            vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{},silTarget:null,
-           vmg:"none",vmgOpen:false,cratesOpen:false};
+           vmg:"none",vcrate:"none",vmgOpen:false,cratesOpen:false};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
 let lastTarget="soldier"; // spread target: soldier (guns) or tank (AT weapons)
 let lastRecoil=true; // whether the recoil pane is shown
@@ -1529,7 +1529,10 @@ function renderVehicleDetail(){
   const arm=v.hitPoints&&v.armorHPMul?v.hitPoints*v.armorHPMul:0;
   // Only sidecar bikes can mount an LMG. They spawn for the same base as the plain bike,
   // and mounting raises it: Tier 1 LMG +92, Tier 2 LMG (or .50 cal for US/SU) +180.
-  const mountable = v.category==="Motorbikes" && /sidecar/i.test(v.name);
+  // Mountable armament: sidecar bikes + non-amphibious infantry jeeps. Mounting an LMG
+  // and/or bringing a supply crate raises the spawn cost.
+  const JEEPS=["Truck, 1/4 ton, 4x4","Kübelwagen Typ 82","GAZ-67"];
+  const mountable = (v.category==="Motorbikes" && /sidecar/i.test(v.name)) || JEEPS.includes(v.name);
   let baseSpawn=v.spawnCost;
   if(mountable && baseSpawn==null){
     const plain=v.name.replace(/\s*with\s*sidecar/i,"").trim().toLowerCase();
@@ -1537,8 +1540,12 @@ function renderVehicleDetail(){
     if(twin) baseSpawn=twin.spawnCost;
   }
   const MG_ADD={none:0,t1:92,t2:180};
-  const spawnVal = mountable ? (baseSpawn!=null?baseSpawn+MG_ADD[state.vmg]:null) : v.spawnCost;
-  const spawnLabel = mountable ? ("Spawn cost"+(state.vmg==="none"?"":" · +"+(state.vmg==="t1"?"T1 LMG":"T2 LMG"))) : "Spawn cost";
+  const crateAdd=(state.vcrate!=="none" && typeof CRATE_COSTS!=="undefined")?(CRATE_COSTS[state.vcrate]||0):0;
+  const mgAdd=mountable?MG_ADD[state.vmg]:0;
+  const hasSpawn=baseSpawn!=null;
+  const spawnVal=hasSpawn?baseSpawn+mgAdd+crateAdd:null;
+  const extras=[]; if(mgAdd) extras.push("+"+(state.vmg==="t1"?"T1 LMG":"T2 LMG")); if(crateAdd) extras.push("+"+state.vcrate+" crate");
+  const spawnLabel="Spawn cost"+(extras.length?" · "+extras.join(" "):"");
   R.appendChild(group("Mobility &amp; durability",[
     v.hitPoints?cell("Hit points",fmt(v.hitPoints),"hp",{hot:true,w:"n"}):null,
     v.armorHPMul?cell("Armor mult",fmt(v.armorHPMul,0),"×",{w:"n"}):null,
@@ -1548,33 +1555,18 @@ function renderVehicleDetail(){
     v.reverseSpeedKPH?cell("Reverse",fmt(v.reverseSpeedKPH),"km/h",{w:"n"}):null,
     v.mass?cell("Mass",fmt(v.mass/1000,1),"t",{w:"n"}):null,
     v.fuelCapacity?cell("Fuel",fmt(v.fuelCapacity),"L",{w:"n"}):null,
-    (spawnVal!=null)?cell(spawnLabel,cr(fmt(spawnVal)),"",{hot:true,w:"n"}):null,
+    (spawnVal!=null)?cell(spawnLabel,cr(fmt(spawnVal)),"",{hot:true,w:"w"}):null,
     v.deployPoolCost?cell("Deploy pool",fmt(v.deployPoolCost),"",{w:"n"}):null,
     v.purchaseCostCredits?cell("Cost to buy",cr(fmt(v.purchaseCostCredits))+" "+gd(fmt(v.purchaseCostGold||0)),"",{w:"w"}):null,
   ].filter(Boolean)));
 
-  // mountable sidecar bikes: LMG toggle that drives the spawn cost
-  if(mountable){
-    const open=state.vmgOpen;
-    const mh=el("div","cfg-divider collapse-head"+(open?"":" closed"),`<span class="tw">▾</span>Mounted LMG`);
-    mh.onclick=()=>{state.vmgOpen=!state.vmgOpen;renderVehicleDetail();};
-    R.appendChild(mh);
-    if(open){
-      const row=el("div","veh-toggle"); const sg=el("div","seg");
-      seg(sg,[{id:"none",label:"No MG"},{id:"t1",label:"Tier 1 LMG (+92)"},{id:"t2",label:"Tier 2 LMG (+180)"}],state.vmg,id=>{state.vmg=id;renderVehicleDetail();});
-      row.appendChild(sg); R.appendChild(row);
-    }
-  }
-
-  // collapsible supply-crate menu
-  if(typeof CRATE_COSTS!=="undefined"){
-    const open=state.cratesOpen;
-    const ch=el("div","cfg-divider collapse-head"+(open?"":" closed"),`<span class="tw">▾</span>Supply crates · cost per use`);
-    ch.onclick=()=>{state.cratesOpen=!state.cratesOpen;renderVehicleDetail();};
-    R.appendChild(ch);
-    if(open){
-      const g=el("div","grid"); Object.keys(CRATE_COSTS).forEach(k=>g.appendChild(cell(k,cr(fmt(CRATE_COSTS[k])),"",{w:"n"}))); R.appendChild(g);
-    }
+  // spawn-loadout selectors (styled like the badge row) — each adjusts the spawn cost
+  if(hasSpawn){
+    const load=el("div","veh-badges");
+    const addSel=(lbl,items,cur,set)=>{const b=el("div","cfg-seg");b.appendChild(el("label",null,lbl));const sg=el("div","seg wrapseg");b.appendChild(sg);seg(sg,items,cur,id=>{set(id);renderVehicleDetail();});load.appendChild(b);};
+    if(mountable) addSel("Mounted armament",[{id:"none",label:"No MG"},{id:"t1",label:"Tier 1 LMG"},{id:"t2",label:"Tier 2 LMG"}],state.vmg,id=>state.vmg=id);
+    if(typeof CRATE_COSTS!=="undefined") addSel("Supply crate",[{id:"none",label:"No crate"},...Object.keys(CRATE_COSTS).map(k=>({id:k,label:k+" ("+CRATE_COSTS[k]+")"}))],state.vcrate,id=>state.vcrate=id);
+    R.appendChild(load);
   }
 
   if(!ws.length){ R.appendChild(el("div","hint","This vehicle has no armament.")); return; }
@@ -1596,6 +1588,7 @@ function renderVehicleDetail(){
   cfgbar.appendChild(el("div","cfg-divider","Badges"));
   const badgeRow=el("div","veh-badges");
   const addSeg=(lbl,items,cur,set)=>{const b=el("div","cfg-seg");b.appendChild(el("label",null,lbl));const sg=el("div","seg");b.appendChild(sg);seg(sg,items,cur,id=>{set(id);renderVehicleDetail();});badgeRow.appendChild(b);};
+  addSeg("Enemy Heavy Set",HEAVYSET,state.vheavyset,id=>state.vheavyset=id);
   addSeg("Gunner badge (reload)",GUNNER,state.vgunner,id=>state.vgunner=id);
   addSeg("Grenadier badge (HE vs infantry)",GRENADIER,state.vgrenadier,id=>state.vgrenadier=id);
   cfgbar.appendChild(badgeRow);
