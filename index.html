@@ -157,6 +157,12 @@ body.veh .layout{grid-template-columns:1fr}
 .seg button.on{background:var(--brass);color:#161810;border-color:var(--brass);font-weight:600}
 body.veh .seg button.on{color:#0d1116}
 .arm-seg{margin-top:12px}
+/* three equal Vehicle sub-blocks: Mobility / Durability / Cost */
+.vsub-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;align-items:start}
+.vsub{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px}
+.vsub>h4{font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--brass);margin:0 0 8px}
+.vsub .cell{max-width:none;min-width:0}
+@media(max-width:900px){.vsub-grid{grid-template-columns:1fr}}
 body.veh .seg button[aria-pressed="true"]{background:var(--brass);color:#0d1116;border-color:var(--brass)}
 .hint{font-size:12px;color:var(--ink-faint);margin-top:4px;line-height:1.4}
 .resetbtn{background:transparent;border:1px solid var(--line);color:var(--ink-dim);padding:7px 10px;border-radius:var(--radius);font-size:12px;letter-spacing:.06em;text-transform:uppercase;width:100%}
@@ -1551,19 +1557,29 @@ function renderVehicleDetail(){
   const spawnVal=hasSpawn?baseSpawn+mgAdd+crateAdd:null;
   const extras=[]; if(mgAdd) extras.push("+"+(state.vmg==="t1"?"T1 LMG":"T2 LMG")); if(crateAdd) extras.push("+"+fmt(crateAdd)+" crates");
   const spawnLabel="Spawn cost"+(extras.length?" · "+extras.join(" "):"");
-  R.appendChild(group("Mobility &amp; durability",[
-    v.hitPoints?cell("Hit points",fmt(v.hitPoints),"hp",{hot:true,w:"n"}):null,
-    v.armorHPMul?cell("Armor mult",fmt(v.armorHPMul,0),"×",{w:"n"}):null,
-    arm?cell("Effective armor",fmt(arm),"hp",{hot:true,w:"w"}):null,
+  const mobilityCells=[
     v.speed?cell("Top speed",fmt(v.speed),"km/h",{w:"n"}):null,
     v.speedOffRoadKph?cell("Off-road",fmt(v.speedOffRoadKph),"km/h",{w:"n"}):null,
     v.reverseSpeedKPH?cell("Reverse",fmt(v.reverseSpeedKPH),"km/h",{w:"n"}):null,
     v.mass?cell("Mass",fmt(v.mass/1000,1),"t",{w:"n"}):null,
     v.fuelCapacity?cell("Fuel",fmt(v.fuelCapacity),"L",{w:"n"}):null,
-    (spawnVal!=null)?cell(spawnLabel,cr(fmt(spawnVal)),"",{hot:true,w:"w"}):null,
+  ].filter(Boolean);
+  const durabilityCells=[
+    v.hitPoints?cell("Hit points",fmt(v.hitPoints),"hp",{hot:true,w:"n"}):null,
+    v.armorHPMul?cell("Armor mult",fmt(v.armorHPMul,0),"×",{w:"n"}):null,
+    arm?cell("Effective armor",fmt(arm),"hp",{hot:true,w:"n"}):null,
+  ].filter(Boolean);
+  const costCells=[
+    (spawnVal!=null)?cell(spawnLabel,cr(fmt(spawnVal)),"",{hot:true,w:"n"}):null,
     v.deployPoolCost?cell("Deploy pool",fmt(v.deployPoolCost),"",{w:"n"}):null,
-    v.purchaseCostCredits?cell("Cost to buy",cr(fmt(v.purchaseCostCredits))+" "+gd(fmt(v.purchaseCostGold||0)),"",{w:"w"}):null,
-  ].filter(Boolean)));
+    v.purchaseCostCredits?cell("Cost to buy",cr(fmt(v.purchaseCostCredits))+" "+gd(fmt(v.purchaseCostGold||0)),"",{w:"n"}):null,
+  ].filter(Boolean);
+  const vgrid=el("div","vsub-grid");
+  const subgroup=(title,cells)=>{ if(!cells.length) return; const box=el("div","vsub"); box.appendChild(el("h4",null,title)); const g=el("div","grid"); cells.forEach(c=>g.appendChild(c)); box.appendChild(g); vgrid.appendChild(box); };
+  subgroup("Mobility",mobilityCells);
+  subgroup("Durability",durabilityCells);
+  subgroup("Cost",costCells);
+  R.appendChild(vgrid);
 
   // supply-crate selectors — only crate-capable vehicles; cargo vehicles take two
   const slots=v.crateSlots||0;
