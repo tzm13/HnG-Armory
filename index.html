@@ -163,6 +163,13 @@ body.veh .seg button.on{color:#0d1116}
 .vsub>h4{font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--brass);margin:0 0 8px}
 .vsub .cell{max-width:none;min-width:0}
 .fml-ring{display:inline-flex;align-items:center;gap:12px;width:fit-content;max-width:340px;margin-bottom:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:8px 14px 8px 10px}
+/* compact vehicle loadout controls (dropdowns like the infantry mod selectors) */
+.veh-loadstrip{display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin-bottom:14px}
+.veh-loadstrip .fml-ring{margin-bottom:0}
+.veh-selrow{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}
+.veh-loadstrip .cfg-sel,.veh-selrow .cfg-sel{min-width:170px;max-width:250px;flex:0 1 auto}
+.veh-loadstrip .cfg-sel select,.veh-selrow .cfg-sel select{width:100%;font-size:14px;padding:6px 8px}
+.veh-badgeflow{display:flex;flex-wrap:wrap;gap:16px}
 .fml-ring svg{flex:0 0 auto}
 .fml-lbl{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--ink-dim)}
 .fml-sub{font-family:"JetBrains Mono";font-size:13px;font-weight:600;margin-top:2px}
@@ -1629,63 +1636,63 @@ function renderVehicleDetail(){
   subgroup("Durability",durabilityCells);
   subgroup("Cost",costCells);
   R.appendChild(vgrid);
-  // Field Maintenance Load ring (vehicle base + selected shell + crates; ÷4 = seconds)
-  (function(){
-    const wsF=vehWeapons(v); let fw=null;
-    if(mountable){ if(state.vmg!=="none"){const idx=state.vmg==="t1"?0:Math.min(1,wsF.length-1);fw=wsF[idx]?wsF[idx].w:null;} }
-    else if(wsF.length){ fw=wsF[Math.min(state.vweap,wsF.length-1)].w; }
-    const crateFml=(state.vcrate!=="none"?2:0)+((v.crateSlots>1&&state.vcrate2!=="none")?2:0);
-    const sec=fmlSeconds(fw,state.vAmmoId,[],v.deployPoolCost||0)+crateFml;
-    if(sec>0) R.appendChild(fmlRing(sec));
-  })();
 
-  // supply-crate selectors — only crate-capable vehicles; cargo vehicles take two
-  const slots=v.crateSlots||0;
-  const crateCost=id=>(id&&id!=="none"&&typeof CRATE_COSTS!=="undefined"&&CRATE_COSTS[id])?CRATE_COSTS[id]:0;
-  if(slots>0 && typeof CRATE_COSTS!=="undefined"){
-    const opts=[{id:"none",label:"No crate"},...Object.keys(CRATE_COSTS).map(k=>({id:k,label:k+" ("+CRATE_COSTS[k]+")"}))];
-    const load=el("div","veh-badges");
-    const addCrate=(lbl,cur,set)=>{const b=el("div","cfg-seg");b.appendChild(el("label",null,lbl));const sg=el("div","seg wrapseg");b.appendChild(sg);seg(sg,opts,cur,id=>{set(id);renderVehicleDetail();});load.appendChild(b);};
-    addCrate(slots>1?"Supply crate 1":"Supply crate",state.vcrate,id=>state.vcrate=id);
-    if(slots>1) addCrate("Supply crate 2",state.vcrate2,id=>state.vcrate2=id);
-    R.appendChild(load);
+  // resolve the selected weapon up front (needed for FML, ammo list, and stats)
+  let vw=null, noArm=false;
+  if(ws.length){
+    if(mountable){
+      if(state.vmg!=="none"){ const idx=state.vmg==="t1"?0:Math.min(1,ws.length-1); vw=ws[idx].w; if(!state.vAmmoId)state.vAmmoId=vw.defaultAmmo.id; }
+      else noArm=true;
+    } else { vw=ws[Math.min(state.vweap,ws.length-1)].w; if(!state.vAmmoId)state.vAmmoId=vw.defaultAmmo.id; }
   }
+  // compact dropdown helper (mirrors the infantry mod selectors)
+  const vsel=(label,options,current,onChange)=>{
+    const b=el("div","cfg-sel"); b.appendChild(el("label",null,label));
+    const sel=el("select"); options.forEach(o=>{const opt=el("option",null,o.label);opt.value=o.id;if(String(o.id)===String(current))opt.selected=true;sel.appendChild(opt);});
+    sel.onchange=()=>onChange(sel.value); b.appendChild(sel); return b;
+  };
+
+  const slots=v.crateSlots||0;
+  const crateFml=(state.vcrate!=="none"?2:0)+((slots>1&&state.vcrate2!=="none")?2:0);
+  const fmlSec=fmlSeconds(noArm?null:vw,state.vAmmoId,[],v.deployPoolCost||0)+crateFml;
+
+  // loadout strip: FML ring + supply-crate dropdown(s), packed to fill the row
+  const vstrip=el("div","veh-loadstrip");
+  if(fmlSec>0) vstrip.appendChild(fmlRing(fmlSec));
+  if(slots>0 && typeof CRATE_COSTS!=="undefined"){
+    const opts=[{id:"none",label:"No crate"},...Object.keys(CRATE_COSTS).map(k=>({id:k,label:k+" ("+CRATE_COSTS[k]+" cr)"}))];
+    vstrip.appendChild(vsel(slots>1?"Supply crate 1":"Supply crate",opts,state.vcrate,id=>{state.vcrate=id;renderVehicleDetail();}));
+    if(slots>1) vstrip.appendChild(vsel("Supply crate 2",opts,state.vcrate2,id=>{state.vcrate2=id;renderVehicleDetail();}));
+  }
+  R.appendChild(vstrip);
 
   if(!ws.length){ R.appendChild(el("div","hint","This vehicle has no armament.")); return; }
 
   // ===== ARMAMENT section =====
   const wsec=el("div","stat-group sec-head arm-sec"); wsec.appendChild(el("h3",null,"Armament"));
-  const wseg=el("div","seg wrapseg arm-seg");
-  let vw;
+  const selrow=el("div","veh-selrow");
   if(mountable){
-    const items=[{id:"none",label:"No MG"}];
-    ws.forEach((x,i)=>items.push({id:(i===0?"t1":"t2"),label:"Tier "+(i+1)+": "+x.w.name.replace(/\s*Mounted$/,"")}));
-    seg(wseg,items,state.vmg,id=>{ state.vmg=id; if(id!=="none"){const idx=id==="t1"?0:Math.min(1,ws.length-1);state.vweap=idx;state.vAmmoId=ws[idx].w.defaultAmmo.id;state.vModIds=[];} renderVehicleDetail(); });
-    wsec.appendChild(wseg); R.appendChild(wsec);
-    if(state.vmg==="none"){ if(C)C.innerHTML=""; R.appendChild(el("div","hint","No armament mounted — spawn cost shown is the base cost.")); return; } // no armament → section closed up
-    const idx=state.vmg==="t1"?0:Math.min(1,ws.length-1);
-    vw=ws[idx].w; if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
+    const items=[{id:"none",label:"No MG"},...ws.map((x,i)=>({id:(i===0?"t1":"t2"),label:"Tier "+(i+1)+": "+x.w.name.replace(/\s*Mounted$/,"")}))];
+    selrow.appendChild(vsel("Mounted armament",items,state.vmg,id=>{ state.vmg=id; if(id!=="none"){const idx=id==="t1"?0:Math.min(1,ws.length-1);state.vweap=idx;state.vAmmoId=ws[idx].w.defaultAmmo.id;state.vModIds=[];} renderVehicleDetail(); }));
   } else {
-    seg(wseg,ws.map((x,i)=>({id:String(i),label:x.label})),String(Math.min(state.vweap,ws.length-1)),id=>{const i=+id;state.vweap=i;state.vAmmoId=ws[i].w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();});
-    wsec.appendChild(wseg); R.appendChild(wsec);
-    vw=ws[Math.min(state.vweap,ws.length-1)].w;
-    if(!state.vAmmoId) state.vAmmoId=vw.defaultAmmo.id;
+    selrow.appendChild(vsel("Weapon",ws.map((x,i)=>({id:String(i),label:x.label})),String(Math.min(state.vweap,ws.length-1)),id=>{const i=+id;state.vweap=i;state.vAmmoId=ws[i].w.defaultAmmo.id;state.vModIds=[];renderVehicleDetail();}));
   }
+  if(vw){
+    const ammoOpts=[vw.defaultAmmo,...(vw.ammunition||[])].map((a,i)=>({id:a.id,label:a.name+(i===0?" (default)":"")}));
+    selrow.appendChild(vsel("Ammunition",ammoOpts,state.vAmmoId,id=>{state.vAmmoId=+id;renderVehicleDetail();}));
+  }
+  wsec.appendChild(selrow); R.appendChild(wsec);
 
-  // config bar: ammunition + Gunner + Grenadier badges
-  const cfgbar=el("div","veh-cfg");
-  cfgbar.appendChild(el("div","cfg-divider","Loadout"));
-  const ammoWrap=el("div","cfg-sel"); ammoWrap.appendChild(el("label",null,"Ammunition"));
-  const asel=el("select");[vw.defaultAmmo,...(vw.ammunition||[])].forEach((a,i)=>{const o=el("option",null,a.name+(i===0?" (default)":""));o.value=a.id;if(a.id===state.vAmmoId)o.selected=true;asel.appendChild(o);});
-  asel.onchange=()=>{state.vAmmoId=+asel.value;renderVehicleDetail();}; ammoWrap.appendChild(asel); cfgbar.appendChild(ammoWrap);
-  cfgbar.appendChild(el("div","cfg-divider","Badges"));
-  const badgeRow=el("div","veh-badges");
-  const addSeg=(lbl,items,cur,set)=>{const b=el("div","cfg-seg");b.appendChild(el("label",null,lbl));const sg=el("div","seg");b.appendChild(sg);seg(sg,items,cur,id=>{set(id);renderVehicleDetail();});badgeRow.appendChild(b);};
+  if(noArm){ if(C)C.innerHTML=""; R.appendChild(el("div","hint","No armament mounted — spawn cost shown is the base cost.")); return; }
+
+  // badges (few options each — kept as segmented toggles)
+  const badgeRow=el("div","veh-badges"); badgeRow.appendChild(el("div","cfg-divider","Badges"));
+  const brow=el("div","veh-badgeflow"); badgeRow.appendChild(brow);
+  const addSeg=(lbl,items,cur,set)=>{const b=el("div","cfg-seg");b.appendChild(el("label",null,lbl));const sg=el("div","seg");b.appendChild(sg);seg(sg,items,cur,id=>{set(id);renderVehicleDetail();});brow.appendChild(b);};
   addSeg("Enemy Heavy Set",HEAVYSET,state.vheavyset,id=>state.vheavyset=id);
   addSeg("Gunner badge (reload)",GUNNER,state.vgunner,id=>state.vgunner=id);
   addSeg("Grenadier badge (HE vs infantry)",GRENADIER,state.vgrenadier,id=>state.vgrenadier=id);
-  cfgbar.appendChild(badgeRow);
-  R.appendChild(cfgbar);
+  R.appendChild(badgeRow);
 
   const cfg={ammoId:state.vAmmoId,modIds:state.vModIds,hitbox:state.vhitbox,heavyset:state.vheavyset,fastReload:"none",ironFist:"none",grenadier:"none",gunner:state.vgunner,stance:"stand"};
   const s=compute(vw,cfg), a=s.ammo;
