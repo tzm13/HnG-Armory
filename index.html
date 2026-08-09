@@ -162,6 +162,11 @@ body.veh .seg button.on{color:#0d1116}
 .vsub{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px}
 .vsub>h4{font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--brass);margin:0 0 8px}
 .vsub .cell{max-width:none;min-width:0}
+.fml-ring{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:8px 12px}
+.fml-ring svg{flex:0 0 auto}
+.fml-lbl{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--ink-dim)}
+.fml-sub{font-family:"JetBrains Mono";font-size:13px;font-weight:600;margin-top:2px}
+.fml-note{font-size:10px;color:var(--ink-faint);margin-top:2px}
 .vs-vehcfg{display:flex;flex-direction:column;gap:5px;margin-top:6px}
 .vs-vehsel{width:100%;font-size:12px;padding:5px 6px;background:#0f161b;color:var(--ink);border:1px solid var(--line);border-radius:var(--radius)}
 .vs-colname{font-family:"Oswald";text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--ink-dim)}
@@ -494,6 +499,33 @@ if(typeof WEAPONS==="undefined"||!Array.isArray(WEAPONS)||!WEAPONS.length){
 const prod = arr => arr.reduce((a,b)=>a*(b??1),1);
 const isDefaultAmmo = (w,a) => a.id === w.defaultAmmo.id;
 
+// ---- Field Maintenance Load: deployPoolCost ÷ 4 = seconds (confirmed in-game: PPSh 80→0:20,
+// Pershing 750→3:07). Timer caps at 4:00. ----
+const FML_MAX=240;   // 4:00 timer cap
+const FML_DIV=4;     // tokens → seconds
+function fmlSeconds(w,ammoId,modIds,base){
+  let raw=base||0;
+  if(w){ raw+=w.deployPoolCost||0;
+    const a=[w.defaultAmmo,...(w.ammunition||[])].find(x=>x.id===ammoId)||w.defaultAmmo;
+    if(a) raw+=a.deployPoolCost||0;
+    (w.modifiers||[]).forEach(m=>{ if((modIds||[]).includes(m.id)) raw+=m.deployPoolCost||0; });
+  }
+  return raw/FML_DIV; // tokens → seconds
+}
+function fmtMMSS(sec){ const s=Math.round(sec); const m=Math.floor(s/60), r=s%60; return m+":"+String(r).padStart(2,"0"); }
+function fmlRing(sec,label){
+  const frac=Math.max(0,Math.min(1,sec/FML_MAX));
+  const col=frac<0.5?"#5fbf6a":frac<0.8?"#e7c15a":"#d9563f"; // low green / mid amber / high red
+  const R=26,C=2*Math.PI*R, off=C*(1-frac), cx=32,cy=32;
+  const svg='<svg viewBox="0 0 64 64" width="64" height="64">'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="#ffffff18" stroke-width="6"/>'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="'+R+'" fill="none" stroke="'+col+'" stroke-width="6" stroke-linecap="round" '+
+      'stroke-dasharray="'+C.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 '+cx+' '+cy+')"/>'+
+    '<text x="32" y="35" text-anchor="middle" fill="var(--ink)" font-size="13" font-family="JetBrains Mono" font-weight="600">'+fmtMMSS(sec)+'</text></svg>';
+  const box=el("div","fml-ring");
+  box.innerHTML=svg+'<div class="fml-meta"><div class="fml-lbl">Field maintenance</div><div class="fml-sub" style="color:'+col+'">'+(label||(frac<0.5?"LOW":frac<0.8?"MEDIUM":"HIGH"))+' \u00b7 '+fmtMMSS(sec)+' / 4:00</div><div class="fml-note">per-death resupply \u00b7 mods included</div></div>';
+  return box;
+}
 function compute(w, cfg){
   const ammo = [w.defaultAmmo, ...(w.ammunition||[])].find(a=>a.id===cfg.ammoId) || w.defaultAmmo;
   const mods = (w.modifiers||[]).filter(m=>cfg.modIds.includes(m.id));
@@ -795,9 +827,14 @@ function renderReadouts(s,b){
   const R=$("#readouts"); R.innerHTML="";
   const C=$("#curvesCol"); if(C)C.innerHTML="";
   const kind=itemKind(curWeapon());
-  if(kind==="explosive"){renderExplosive(R,curWeapon());return;}
-  if(kind==="equipment"){renderEquipment(R,curWeapon());return;}
-  renderGun(R,s,b);
+  if(kind==="explosive"){renderExplosive(R,curWeapon());appendFml(R);return;}
+  if(kind==="equipment"){renderEquipment(R,curWeapon());appendFml(R);return;}
+  renderGun(R,s,b); appendFml(R);
+}
+function appendFml(R){
+  const w=curWeapon(); if(!w)return;
+  const sec=fmlSeconds(w,state.ammoId,state.modIds,0);
+  if(sec>0) R.appendChild(fmlRing(sec));
 }
 
 function renderGun(R,s,b){
@@ -1570,12 +1607,11 @@ function renderVehicleDetail(){
   ].filter(Boolean);
   const durabilityCells=[
     v.hitPoints?cell("Hit points",fmt(v.hitPoints),"hp",{hot:true,w:"n"}):null,
-    v.armorHPMul?cell("Armor mult",fmt(v.armorHPMul,0),"×",{w:"n"}):null,
+    v.armorHPMul?cell("Armor mult",fmt(v.armorHPMul,v.armorHPMul%1===0?0:2),"×",{w:"n"}):null,
     arm?cell("Effective armor",fmt(arm),"hp",{hot:true,w:"n"}):null,
   ].filter(Boolean);
   const costCells=[
     (spawnVal!=null)?cell(spawnLabel,cr(fmt(spawnVal)),"",{hot:true,w:"n"}):null,
-    v.deployPoolCost?cell("Deploy pool",fmt(v.deployPoolCost),"",{w:"n"}):null,
     v.purchaseCostCredits?cell("Cost to buy",cr(fmt(v.purchaseCostCredits))+" "+gd(fmt(v.purchaseCostGold||0)),"",{w:"n"}):null,
   ].filter(Boolean);
   const vgrid=el("div","vsub-grid");
@@ -1584,6 +1620,15 @@ function renderVehicleDetail(){
   subgroup("Durability",durabilityCells);
   subgroup("Cost",costCells);
   R.appendChild(vgrid);
+  // Field Maintenance Load ring (vehicle base + selected shell + crates; ÷4 = seconds)
+  (function(){
+    const wsF=vehWeapons(v); let fw=null;
+    if(mountable){ if(state.vmg!=="none"){const idx=state.vmg==="t1"?0:Math.min(1,wsF.length-1);fw=wsF[idx]?wsF[idx].w:null;} }
+    else if(wsF.length){ fw=wsF[Math.min(state.vweap,wsF.length-1)].w; }
+    const crateFml=(state.vcrate!=="none"?2:0)+((v.crateSlots>1&&state.vcrate2!=="none")?2:0);
+    const sec=fmlSeconds(fw,state.vAmmoId,[],v.deployPoolCost||0)+crateFml;
+    if(sec>0) R.appendChild(fmlRing(sec));
+  })();
 
   // supply-crate selectors — only crate-capable vehicles; cargo vehicles take two
   const slots=v.crateSlots||0;
