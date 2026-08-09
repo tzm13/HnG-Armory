@@ -290,14 +290,18 @@ body.veh .seg button:not([aria-pressed="true"]),body.veh .cfg-sel select,body.ve
 .vs-table th{font-family:"Oswald";letter-spacing:.03em;font-size:14px;text-transform:none;position:static;background:none;cursor:default}
 .vs-head{vertical-align:top;padding:6px 10px 10px !important;text-align:left !important;border-bottom:1px solid var(--brass) !important}
 .vs-head select{max-width:100%}
-.vs-grouprow td{border-bottom:none;padding:16px 0 0 !important}
-.vs-grouplbl{text-align:left !important;font-family:"Oswald";text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--brass);
-  background:var(--panel-2);border:1px solid var(--brass-dim);border-radius:6px;padding:8px 12px !important;
-  display:flex;align-items:center;gap:8px}
-.vs-grouplbl .cur{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:1px solid var(--brass-dim);border-radius:4px;font-size:9px;color:var(--brass);transition:transform .12s}
-.vs-grouplbl .ghint{margin-left:auto;font-size:9px;letter-spacing:.1em;color:var(--ink-faint);text-transform:uppercase}
-/* subtle outline around each group's data rows via a tinted first cell edge */
-.vs-row td.vs-lbl{border-left:2px solid var(--line)}
+/* compare: each section is its own bordered panel */
+.vs-headtable{margin-bottom:14px}
+.vs-headtable,.vs-gtable{width:100%;border-collapse:collapse;table-layout:fixed}
+.vs-group{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px;background:var(--panel)}
+.vs-ghead{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--panel-2);cursor:pointer;user-select:none;
+  font-family:"Oswald";text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--brass)}
+.vs-ghead:not(.closed){border-bottom:1px solid var(--line)}
+.vs-ghead:hover{color:var(--ink)}
+.vs-ghead .cur{font-size:10px;color:var(--brass);transition:transform .12s}
+.vs-ghead.closed .cur{transform:rotate(-90deg)}
+.vs-ghead .gtitle{flex:1}
+.vs-gtable td.vs-lbl{border-left:none}
 .vs-text{font-family:"Barlow Semi Condensed" !important;color:var(--ink-dim)}
 .vs-empty{border-bottom:1px solid var(--line)}
 .vs-area{display:flex;gap:18px;align-items:flex-start}
@@ -320,10 +324,7 @@ body.veh .seg button:not([aria-pressed="true"]),body.veh .cfg-sel select,body.ve
 .vs-presetwrap.closed .cur{transform:rotate(-90deg)}
 .vs-presetwrap.closed .vs-presets{display:none}
 .vs-presets{display:flex;flex-wrap:wrap;gap:14px;padding:4px 14px 14px}
-.vs-grouprow .vs-grouplbl{cursor:pointer;user-select:none}
-.vs-grouprow .cur{display:inline-block}
-.vs-grouprow.closed .cur{transform:rotate(-90deg)}
-.vs-grouprow:hover .vs-grouplbl{border-color:var(--brass);color:var(--ink)}
+
 .vs-preset{display:flex;flex-direction:column;gap:4px}
 .vs-preset>label{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--ink-faint)}
 .vs-preset .seg{gap:3px}
@@ -1365,15 +1366,10 @@ function renderVersus(){
     return {w,entry,color:VS_PALETTE[i],s};
   }).filter(Boolean);
 
-  // 2) one table: loadout pickers live in the header so they align with their column
-  const t=el("table","vs-table");
-  const cg=el("colgroup");
-  cg.appendChild(el("col","vs-col-lbl"));
-  [0,1,2].forEach(()=>cg.appendChild(el("col","vs-col")));
-  t.appendChild(cg);
-
-  const thead=el("thead"), htr=el("tr");
-  htr.appendChild(el("th","vs-lbl",""));
+  // 2) picker header (its own fixed-layout table so columns line up with the panels below)
+  const mkCg=()=>{const cg=el("colgroup");cg.appendChild(el("col","vs-col-lbl"));[0,1,2].forEach(()=>cg.appendChild(el("col","vs-col")));return cg;};
+  const headTable=el("table","vs-table vs-headtable"); headTable.appendChild(mkCg());
+  const thead=el("thead"), htr=el("tr"); htr.appendChild(el("th","vs-lbl",""));
   [0,1,2].forEach(i=>{
     const entry=state.versus[i], th=el("th","vs-head");
     const top=el("div","vs-picktop");
@@ -1383,50 +1379,50 @@ function renderVersus(){
     if(entry){const w=WEAPONS.find(x=>x.id===entry.wid); if(w)th.appendChild(columnConfig(i,w,entry));}
     htr.appendChild(th);
   });
-  thead.appendChild(htr); t.appendChild(thead);
+  thead.appendChild(htr); headTable.appendChild(thead);
+
+  const area=el("div","vs-area");
+  const tw=el("div","vs-tablewrap"); tw.appendChild(headTable);
 
   if(cols.length<2){
-    t.appendChild(el("tbody"));
-    host.appendChild(t);
-    host.appendChild(el("div","hint",'Select at least two weapons to compare.'));
-    return;
+    tw.appendChild(el("div","hint","Select at least two weapons to compare."));
+    area.appendChild(tw); host.appendChild(area); return;
   }
 
-  // 3) grouped stat rows — each section header collapses/expands its rows
-  const tb=el("tbody");
+  // 3) one bordered panel per section — the whole section is grouped, not just its header
   VS_GROUPS.forEach(g=>{
     const closed=state.vsGroupClosed[g.title]===true;
-    const gtr=el("tr","vs-grouprow"+(closed?" closed":""));
-    const gtd=el("td","vs-grouplbl"); gtd.colSpan=1+cols.length;
-    gtd.innerHTML=`<span class="cur">▾</span>${g.title}<span class="ghint">${closed?"click to expand":"click to collapse"}</span>`;
-    gtr.appendChild(gtd); tb.appendChild(gtr);
-    gtr.onclick=()=>{state.vsGroupClosed[g.title]=!closed;renderVersus();};
-    if(closed)return; // header only
-    g.rows.forEach(row=>{
-      const tr=el("tr","vs-row"); tr.appendChild(el("td","vs-lbl",row.label));
-      let best=null;
-      if(!row.text){const vals=cols.map(c=>row.get(c.w,c.s));best=row.better==="up"?Math.max(...vals):Math.min(...vals);}
-      cols.forEach(c=>{
-        const v=row.get(c.w,c.s), td=el("td");
-        if(row.text){td.textContent=v;td.classList.add("vs-text");}
-        else{td.innerHTML=(row.disp?row.disp(c.w,c.s):fmt(v,row.dd))+(row.unit?` <small>${row.unit}</small>`:"");if(Math.abs(v-best)<1e-6)td.classList.add("vs-win");}
-        tr.appendChild(td);
+    const panel=el("div","vs-group");
+    const ghead=el("div","vs-ghead"+(closed?" closed":""));
+    ghead.innerHTML=`<span class="cur">▾</span><span class="gtitle">${g.title}</span>`;
+    ghead.onclick=()=>{state.vsGroupClosed[g.title]=!closed;renderVersus();};
+    panel.appendChild(ghead);
+    if(!closed){
+      const gt=el("table","vs-table vs-gtable"); gt.appendChild(mkCg());
+      const tb=el("tbody");
+      g.rows.forEach(row=>{
+        const tr=el("tr","vs-row"); tr.appendChild(el("td","vs-lbl",row.label));
+        let best=null;
+        if(!row.text){const vals=cols.map(c=>row.get(c.w,c.s));best=row.better==="up"?Math.max(...vals):Math.min(...vals);}
+        cols.forEach(c=>{
+          const v=row.get(c.w,c.s), td=el("td");
+          if(row.text){td.textContent=v;td.classList.add("vs-text");}
+          else{td.innerHTML=(row.disp?row.disp(c.w,c.s):fmt(v,row.dd))+(row.unit?` <small>${row.unit}</small>`:"");if(Math.abs(v-best)<1e-6)td.classList.add("vs-win");}
+          tr.appendChild(td);
+        });
+        for(let k=cols.length;k<3;k++)tr.appendChild(el("td","vs-empty",""));
+        tb.appendChild(tr);
       });
-      // pad empty columns so widths stay put
-      for(let k=cols.length;k<3;k++)tr.appendChild(el("td","vs-empty",""));
-      tb.appendChild(tr);
-    });
+      gt.appendChild(tb); panel.appendChild(gt);
+    }
+    tw.appendChild(panel);
   });
-  t.appendChild(tb);
-  // table on the left, charts pinned to a sticky column on the right
-  const area=el("div","vs-area");
-  const tw=el("div","vs-tablewrap"); tw.appendChild(t); area.appendChild(tw);
+  area.appendChild(tw);
 
   const sers=cols.map(c=>({name:c.w.name,color:c.color,s:c.s}));
   const charts=el("div","vs-charts");
   charts.appendChild(el("div","curves-title","Combat curves"));
   const box=el("div","chartwrap");
-  // one shared legend for both charts, like the Data Sheet's curves column
   box.appendChild(el("div","chart-legend",
     sers.map(x=>`<span class="k"><span class="sw" style="background:${x.color}"></span>${x.name}</span>`).join("")+
     `<span class="k" style="color:var(--ink-faint)">vs distance · after ${state.vs.hitbox}${state.vs.heavyset!=="none"?" · HS "+state.vs.heavyset:""}</span>`));
@@ -1900,45 +1896,51 @@ function renderVehicleVersus(){
 
   const cols=vehVersusCols().filter(Boolean);
 
-  const t=el("table","vs-table");
-  const cg=el("colgroup"); cg.appendChild(el("col","vs-col-lbl")); [0,1,2].forEach(()=>cg.appendChild(el("col","vs-col"))); t.appendChild(cg);
+  const mkCg=()=>{const cg=el("colgroup");cg.appendChild(el("col","vs-col-lbl"));[0,1,2].forEach(()=>cg.appendChild(el("col","vs-col")));return cg;};
+  const headTable=el("table","vs-table vs-headtable"); headTable.appendChild(mkCg());
   const thead=el("thead"), htr=el("tr"); htr.appendChild(el("th","vs-lbl",""));
   [0,1,2].forEach(i=>{
     const entry=state.vversus[i], th=el("th","vs-head");
     const top=el("div","vs-picktop"); const dot=el("span","vs-dot"); dot.style.background=VS_PALETTE[i]; top.appendChild(dot);
-    top.appendChild(el("span","vs-colname",entry?"Slot "+(i+1):"Slot "+(i+1)));
+    top.appendChild(el("span","vs-colname","Slot "+(i+1)));
     th.appendChild(top); th.appendChild(vehColConfig(i,entry)); htr.appendChild(th);
   });
-  thead.appendChild(htr); t.appendChild(thead);
-
-  if(cols.length<2){ t.appendChild(el("tbody")); host.appendChild(t); host.appendChild(el("div","hint","Select at least two vehicles to compare.")); return; }
-
-  const tb=el("tbody");
-  VVS_GROUPS.forEach(g=>{
-    const closed=state.vvsGroupClosed[g.title]===true;
-    const gtr=el("tr","vs-grouprow"+(closed?" closed":"")); const gtd=el("td","vs-grouplbl"); gtd.colSpan=1+cols.length;
-    gtd.innerHTML='<span class="cur">\u25be</span>'+g.title+'<span class="ghint">'+(closed?"click to expand":"click to collapse")+'</span>'; gtr.appendChild(gtd); tb.appendChild(gtr);
-    gtr.onclick=()=>{state.vvsGroupClosed[g.title]=!closed;renderVehicleVersus();};
-    if(closed)return;
-    g.rows.forEach(row=>{
-      const tr=el("tr","vs-row"); tr.appendChild(el("td","vs-lbl",row.label));
-      const vals=cols.map(row.get);
-      const finite=vals.filter(x=>isFinite(x));
-      let best=null; if(finite.length)best=row.better==="up"?Math.max(...finite):Math.min(...finite);
-      cols.forEach((c,ci)=>{
-        const v=vals[ci], td=el("td");
-        td.innerHTML=(row.disp?row.disp(c):fmt(v,row.dd))+(row.unit?' <small>'+row.unit+'</small>':"");
-        if(best!=null&&isFinite(v)&&Math.abs(v-best)<1e-6)td.classList.add("vs-win");
-        tr.appendChild(td);
-      });
-      for(let k=cols.length;k<3;k++)tr.appendChild(el("td","vs-empty",""));
-      tb.appendChild(tr);
-    });
-  });
-  t.appendChild(tb);
+  thead.appendChild(htr); headTable.appendChild(thead);
 
   const area=el("div","vs-area");
-  const tw=el("div","vs-tablewrap"); tw.appendChild(t); area.appendChild(tw);
+  const tw=el("div","vs-tablewrap"); tw.appendChild(headTable);
+
+  if(cols.length<2){ tw.appendChild(el("div","hint","Select at least two vehicles to compare.")); area.appendChild(tw); host.appendChild(area); return; }
+
+  VVS_GROUPS.forEach(g=>{
+    const closed=state.vvsGroupClosed[g.title]===true;
+    const panel=el("div","vs-group");
+    const ghead=el("div","vs-ghead"+(closed?" closed":""));
+    ghead.innerHTML='<span class="cur">\u25be</span><span class="gtitle">'+g.title+'</span>';
+    ghead.onclick=()=>{state.vvsGroupClosed[g.title]=!closed;renderVehicleVersus();};
+    panel.appendChild(ghead);
+    if(!closed){
+      const gt=el("table","vs-table vs-gtable"); gt.appendChild(mkCg());
+      const tb=el("tbody");
+      g.rows.forEach(row=>{
+        const tr=el("tr","vs-row"); tr.appendChild(el("td","vs-lbl",row.label));
+        const vals=cols.map(row.get); const finite=vals.filter(x=>isFinite(x));
+        let best=null; if(finite.length)best=row.better==="up"?Math.max(...finite):Math.min(...finite);
+        cols.forEach((c,ci)=>{
+          const v=vals[ci], td=el("td");
+          td.innerHTML=(row.disp?row.disp(c):fmt(v,row.dd))+(row.unit?' <small>'+row.unit+'</small>':"");
+          if(best!=null&&isFinite(v)&&Math.abs(v-best)<1e-6)td.classList.add("vs-win");
+          tr.appendChild(td);
+        });
+        for(let k=cols.length;k<3;k++)tr.appendChild(el("td","vs-empty",""));
+        tb.appendChild(tr);
+      });
+      gt.appendChild(tb); panel.appendChild(gt);
+    }
+    tw.appendChild(panel);
+  });
+  area.appendChild(tw);
+
   const armed=cols.filter(c=>c.s);
   const charts=el("div","vs-charts"); charts.appendChild(el("div","curves-title","Combat curves"));
   if(armed.length>=2){
