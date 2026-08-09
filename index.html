@@ -162,7 +162,7 @@ body.veh .seg button.on{color:#0d1116}
 .vsub{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px}
 .vsub>h4{font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--brass);margin:0 0 8px}
 .vsub .cell{max-width:none;min-width:0}
-.fml-ring{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:8px 12px}
+.fml-ring{display:inline-flex;align-items:center;gap:12px;width:fit-content;max-width:340px;margin-bottom:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:8px 14px 8px 10px}
 .fml-ring svg{flex:0 0 auto}
 .fml-lbl{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--ink-dim)}
 .fml-sub{font-family:"JetBrains Mono";font-size:13px;font-weight:600;margin-top:2px}
@@ -283,8 +283,14 @@ body.veh .seg button:not([aria-pressed="true"]),body.veh .cfg-sel select,body.ve
 .vs-table th{font-family:"Oswald";letter-spacing:.03em;font-size:14px;text-transform:none;position:static;background:none;cursor:default}
 .vs-head{vertical-align:top;padding:6px 10px 10px !important;text-align:left !important;border-bottom:1px solid var(--brass) !important}
 .vs-head select{max-width:100%}
-.vs-grouprow td{border-bottom:none;padding:14px 0 2px !important}
-.vs-grouplbl{text-align:left !important;font-family:"Oswald";text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--brass)}
+.vs-grouprow td{border-bottom:none;padding:16px 0 0 !important}
+.vs-grouplbl{text-align:left !important;font-family:"Oswald";text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--brass);
+  background:var(--panel-2);border:1px solid var(--brass-dim);border-radius:6px;padding:8px 12px !important;
+  display:flex;align-items:center;gap:8px}
+.vs-grouplbl .cur{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:1px solid var(--brass-dim);border-radius:4px;font-size:9px;color:var(--brass);transition:transform .12s}
+.vs-grouplbl .ghint{margin-left:auto;font-size:9px;letter-spacing:.1em;color:var(--ink-faint);text-transform:uppercase}
+/* subtle outline around each group's data rows via a tinted first cell edge */
+.vs-row td.vs-lbl{border-left:2px solid var(--line)}
 .vs-text{font-family:"Barlow Semi Condensed" !important;color:var(--ink-dim)}
 .vs-empty{border-bottom:1px solid var(--line)}
 .vs-area{display:flex;gap:18px;align-items:flex-start}
@@ -308,9 +314,9 @@ body.veh .seg button:not([aria-pressed="true"]),body.veh .cfg-sel select,body.ve
 .vs-presetwrap.closed .vs-presets{display:none}
 .vs-presets{display:flex;flex-wrap:wrap;gap:14px;padding:4px 14px 14px}
 .vs-grouprow .vs-grouplbl{cursor:pointer;user-select:none}
-.vs-grouprow .cur{display:inline-block;font-size:9px;transition:transform .12s;color:var(--brass)}
+.vs-grouprow .cur{display:inline-block}
 .vs-grouprow.closed .cur{transform:rotate(-90deg)}
-.vs-grouprow:hover .vs-grouplbl{color:var(--ink)}
+.vs-grouprow:hover .vs-grouplbl{border-color:var(--brass);color:var(--ink)}
 .vs-preset{display:flex;flex-direction:column;gap:4px}
 .vs-preset>label{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--ink-faint)}
 .vs-preset .seg{gap:3px}
@@ -834,7 +840,7 @@ function renderReadouts(s,b){
 function appendFml(R){
   const w=curWeapon(); if(!w)return;
   const sec=fmlSeconds(w,state.ammoId,state.modIds,0);
-  if(sec>0) R.appendChild(fmlRing(sec));
+  if(sec>0) R.insertBefore(fmlRing(sec),R.firstChild); // sits at the top of the data sheet
 }
 
 function renderGun(R,s,b){
@@ -1286,6 +1292,7 @@ const VS_GROUPS=[
     {label:"Faction",text:true,get:(w,s)=>(FACTIONS[w.factiontemplateid]||{}).name||w.factiontemplateid},
     {label:"Class",text:true,get:(w,s)=>CATEGORIES[w.weaponcategoryid]||("cat "+w.weaponcategoryid)},
     {label:"Fire mode",text:true,get:(w,s)=>w.fireModeAuto?(w.fireModeSingle?"Select fire":"Automatic"):"Semi-auto"},
+    {label:"Field maintenance",unit:"",better:"down",get:(w,s)=>s.fml,dd:0,disp:(w,s)=>fmtMMSS(s.fml)},
   ]},
   {title:"Damage",rows:[
     {label:"Rate of fire",unit:"rpm",better:"up",get:(w,s)=>s.rpm,dd:0},
@@ -1346,7 +1353,9 @@ function renderVersus(){
 
   const cols=state.versus.map((entry,i)=>{
     if(!entry)return null; const w=WEAPONS.find(x=>x.id===entry.wid); if(!w)return null;
-    return {w,entry,color:VS_PALETTE[i],s:compute(w,{ammoId:entry.ammoId,modIds:entry.modIds,hitbox:state.vs.hitbox,heavyset:state.vs.heavyset,fastReload:state.vs.fastReload,ironFist:state.vs.ironFist,grenadier:state.vs.grenadier,stance:state.vs.stance})};
+    const s=compute(w,{ammoId:entry.ammoId,modIds:entry.modIds,hitbox:state.vs.hitbox,heavyset:state.vs.heavyset,fastReload:state.vs.fastReload,ironFist:state.vs.ironFist,grenadier:state.vs.grenadier,stance:state.vs.stance});
+    s.fml=fmlSeconds(w,entry.ammoId,entry.modIds,0);
+    return {w,entry,color:VS_PALETTE[i],s};
   }).filter(Boolean);
 
   // 2) one table: loadout pickers live in the header so they align with their column
@@ -1382,12 +1391,12 @@ function renderVersus(){
     const closed=state.vsGroupClosed[g.title]===true;
     const gtr=el("tr","vs-grouprow"+(closed?" closed":""));
     const gtd=el("td","vs-grouplbl"); gtd.colSpan=1+cols.length;
-    gtd.innerHTML=`<span class="cur">▾</span> ${g.title}`;
+    gtd.innerHTML=`<span class="cur">▾</span>${g.title}<span class="ghint">${closed?"click to expand":"click to collapse"}</span>`;
     gtr.appendChild(gtd); tb.appendChild(gtr);
     gtr.onclick=()=>{state.vsGroupClosed[g.title]=!closed;renderVersus();};
     if(closed)return; // header only
     g.rows.forEach(row=>{
-      const tr=el("tr"); tr.appendChild(el("td","vs-lbl",row.label));
+      const tr=el("tr","vs-row"); tr.appendChild(el("td","vs-lbl",row.label));
       let best=null;
       if(!row.text){const vals=cols.map(c=>row.get(c.w,c.s));best=row.better==="up"?Math.max(...vals):Math.min(...vals);}
       cols.forEach(c=>{
@@ -1782,6 +1791,7 @@ const VVS_GROUPS=[
     {label:"Top speed",get:c=>c.v.speed||0,unit:"km/h",better:"up"},
     {label:"Mass",get:c=>(c.v.mass||0)/1000,dd:1,unit:"t",better:"down"},
     {label:"Spawn cost",get:c=>c.v.spawnCost==null?Infinity:c.v.spawnCost,disp:c=>c.v.spawnCost==null?"\u2014":cr(fmt(c.v.spawnCost)),better:"down"},
+    {label:"Field maintenance",get:c=>c.fml||0,disp:c=>fmtMMSS(c.fml||0),better:"down"},
   ]},
   {title:"Anti-armor",rows:[
     {label:"Armor damage",get:c=>c.s?(c.s.armorMin+c.s.armorMax)/2:0,disp:c=>c.s?fmt(c.s.armorMin)+"\u2013"+fmt(c.s.armorMax):"\u2014",better:"up"},
@@ -1822,10 +1832,11 @@ function vehVersusCols(){
     if(!e) return null;
     const v=VEHICLES.find(x=>x.id===e.vid); if(!v) return null;
     const ws=vehWeapons(v);
-    if(!ws.length) return {v,vw:null,s:null,ammoId:null,main:false,color:VS_PALETTE[i],i};
+    if(!ws.length) return {v,vw:null,s:null,ammoId:null,fml:(v.deployPoolCost||0)/4,main:false,color:VS_PALETTE[i],i};
     const idx=Math.min(e.vweap||0,ws.length-1), vw=ws[idx].w, ammoId=e.ammoId||vw.defaultAmmo.id;
     const s=compute(vw,{ammoId,modIds:[],hitbox:"torso",heavyset:state.vvs.heavyset,fastReload:"none",ironFist:"none",grenadier:"none",gunner:state.vvs.gunner,stance:"stand"});
-    return {v,vw,s,ammoId,main:ws[idx].main,color:VS_PALETTE[i],i};
+    const fml=fmlSeconds(vw,ammoId,[],v.deployPoolCost||0);
+    return {v,vw,s,ammoId,fml,main:ws[idx].main,color:VS_PALETTE[i],i};
   });
 }
 function vehColConfig(i,entry){
@@ -1899,11 +1910,11 @@ function renderVehicleVersus(){
   VVS_GROUPS.forEach(g=>{
     const closed=state.vvsGroupClosed[g.title]===true;
     const gtr=el("tr","vs-grouprow"+(closed?" closed":"")); const gtd=el("td","vs-grouplbl"); gtd.colSpan=1+cols.length;
-    gtd.innerHTML='<span class="cur">\u25be</span> '+g.title; gtr.appendChild(gtd); tb.appendChild(gtr);
+    gtd.innerHTML='<span class="cur">\u25be</span>'+g.title+'<span class="ghint">'+(closed?"click to expand":"click to collapse")+'</span>'; gtr.appendChild(gtd); tb.appendChild(gtr);
     gtr.onclick=()=>{state.vvsGroupClosed[g.title]=!closed;renderVehicleVersus();};
     if(closed)return;
     g.rows.forEach(row=>{
-      const tr=el("tr"); tr.appendChild(el("td","vs-lbl",row.label));
+      const tr=el("tr","vs-row"); tr.appendChild(el("td","vs-lbl",row.label));
       const vals=cols.map(row.get);
       const finite=vals.filter(x=>isFinite(x));
       let best=null; if(finite.length)best=row.better==="up"?Math.max(...finite):Math.min(...finite);
