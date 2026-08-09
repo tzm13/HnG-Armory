@@ -1884,6 +1884,7 @@ function renderVehicleVersus(){
       '<span class="k" style="color:var(--ink-faint)">vs distance \u00b7 armor damage &amp; penetration</span>'));
     const grid=el("div","mini-grid");
     grid.appendChild(vehVersusChart(sers,{mode:"armor",title:"Armor damage"}));
+    grid.appendChild(vehVersusChart(sers,{mode:"dps",title:"Armor DPS"}));
     grid.appendChild(vehVersusChart(sers,{mode:"pen",title:"Armor pen (mm)"}));
     box.appendChild(grid); charts.appendChild(box);
   } else { charts.appendChild(el("div","hint","Pick armed vehicles to see armor curves.")); }
@@ -1893,14 +1894,15 @@ function vehVersusChart(series,opts={}){
   const mode=opts.mode||"armor";
   const valAt=(s,d)=>{
     const a=s.ammo, nr=s.penNearRange||0, fr=s.penFarRange||Math.max(nr*2,100);
-    if(mode==="armor"){
+    const armAt=dd=>{
       const dFar=(a.armorDamageFarPercent!=null)?a.armorDamageFarPercent:1;
       const full=(s.armorMin+s.armorMax)/2, far=full*dFar;
-      if(fr<=nr||d<=nr)return full; if(d>=fr)return far; return full+(far-full)*(d-nr)/(fr-nr);
-    } else {
-      const full=(s.penMin+s.penMax)/2, far=(s.penFarMin+s.penFarMax)/2;
-      if(fr<=nr||d<=nr)return full; if(d>=fr)return far; return full+(far-full)*(d-nr)/(fr-nr);
-    }
+      if(fr<=nr||dd<=nr)return full; if(dd>=fr)return far; return full+(far-full)*(dd-nr)/(fr-nr);
+    };
+    if(mode==="armor") return armAt(d);
+    if(mode==="dps"){ const full=(s.armorMin+s.armorMax)/2; const rate=full>0?s.armorDPS/full:s.rpm/60; return armAt(d)*rate; }
+    const full=(s.penMin+s.penMax)/2, far=(s.penFarMin+s.penFarMax)/2;
+    if(fr<=nr||d<=nr)return full; if(d>=fr)return far; return full+(far-full)*(d-nr)/(fr-nr);
   };
   const W=396,H=214,pad={l:44,r:8,t:10,b:24}, iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
   const rawMaxD=Math.max(...series.map(x=>x.s.penFarRange||300))*1.2||300;
