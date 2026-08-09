@@ -1469,7 +1469,7 @@ function applyMode(m){
 function selectVehicle(id){
   state.vid=id; state.vweap=0; state.vModIds=[]; state.vmg="none"; state.vcrate="none"; state.vcrate2="none";
   const ws=vehWeapons(curVehicle()); state.vAmmoId = ws.length?ws[0].w.defaultAmmo.id:null;
-  renderVehicleDetail();
+  state.view="detail"; syncTabs();
   document.querySelectorAll("#wpnList .wpn-item").forEach(it=>it.setAttribute("aria-current",it.dataset.vid==id));
 }
 
@@ -1637,9 +1637,11 @@ function renderVehicleDetail(){
   const s=compute(vw,cfg), a=s.ammo;
   const b=compute(vw,{...cfg,ammoId:vw.defaultAmmo.id,modIds:[],gunner:"none"});
   const grenMul=(GRENADIER.find(x=>x.id===state.vgrenadier)||{mult:1}).mult; // HE splash vs infantry
+  const hsMult=(HEAVYSET.find(x=>x.id===state.vheavyset)||{mult:1}).mult; // enemy Heavy Set reduces effective blast
   const explDmg=a.explosiondamage?Math.floor(a.explosiondamage*grenMul):0;
+  const effExpl=Math.floor(explDmg*hsMult); // damage actually applied to the (Heavy Set) target
   const radius=a.explosionradius||0;
-  const killR=(explDmg>TARGET_HP&&radius>0)?radius*(1-TARGET_HP/explDmg):0;
+  const killR=(effExpl>TARGET_HP&&radius>0)?radius*(1-TARGET_HP/effExpl):0;
 
   // per-shell resupply cost from the wiki, keyed by vehicle+shell. Free-fire categories,
   // and coaxial/hull MGs (aux weapons), shoot for free; only the main weapon charges.
@@ -1680,7 +1682,7 @@ function renderVehicleDetail(){
   // combat curves (side column: armor curves, plus blast falloff for HE) + accuracy
   lastStats=s; lastStatsBase=b;
   if(C){ const cw=el("div"); cw.appendChild(el("div","curves-title","Combat curves")); cw.appendChild(vehicleGraphs(s));
-    if(explDmg&&radius){ cw.appendChild(el("div","curves-title","Blast falloff")); cw.appendChild(blastChart(explDmg,radius,killR)); }
+    if(explDmg&&radius){ cw.appendChild(el("div","curves-title","Blast falloff"+(state.vheavyset!=="none"?" · HS "+state.vheavyset:""))); cw.appendChild(blastChart(effExpl,radius,killR)); }
     C.appendChild(cw); }
   lastCone=s.cone;
   R.appendChild(sectionOf("Accuracy & recoil",buildAccuracy({target:"tank",recoil:true})));
@@ -1721,7 +1723,7 @@ function renderVehicleTable(){
       else if(c.k==="pen"||c.k==="admg")val=(s?fmt(val):"\u2014");
       else if(c.num!==false)val=fmt(val);
       r.appendChild(el("td",null,val));});
-    r.onclick=()=>{state.view="detail";selectVehicle(v.id);syncTabs();};
+    r.onclick=()=>selectVehicle(v.id);
     tb.appendChild(r);
   });
   t.appendChild(tb);
@@ -1748,7 +1750,7 @@ const VVS_GROUPS=[
     {label:"Reload",get:c=>c.s?c.s.reload:0,dd:1,disp:c=>c.s?fmt(c.s.reload,1):"\u2014",unit:"s",better:"down"},
     {label:"Damage",get:c=>c.s?c.s.effNear:0,disp:c=>c.s?fmt(c.s.effNear,0)+" \u2192 "+fmt(c.s.effFar,0):"\u2014",unit:"hp",better:"up"},
     {label:"Damage / s",get:c=>c.s?c.s.effDpsNear:0,disp:c=>c.s?fmt(c.s.effDpsNear,0)+" \u2192 "+fmt(c.s.effDpsFar,0):"\u2014",unit:"hp/s",better:"up"},
-    {label:"Explosion",get:c=>c.s&&c.s.ammo.explosiondamage?Math.floor(c.s.ammo.explosiondamage*vvsGren()):0,disp:c=>c.s&&c.s.ammo.explosiondamage?fmt(Math.floor(c.s.ammo.explosiondamage*vvsGren())):"\u2014",unit:"hp",better:"up"},
+    {label:"Explosion dmg (vs infantry)",get:c=>c.s&&c.s.ammo.explosiondamage?Math.floor(c.s.ammo.explosiondamage*vvsGren()):0,disp:c=>c.s&&c.s.ammo.explosiondamage?fmt(Math.floor(c.s.ammo.explosiondamage*vvsGren())):"\u2014",unit:"hp",better:"up"},
     {label:"Kill range",get:c=>vvsKillR(c),dd:2,disp:c=>{const k=vvsKillR(c);return k>0?fmt(k,2):"\u2014";},unit:"m",better:"up"},
   ]},
   {title:"Ballistics",rows:[
@@ -1762,7 +1764,7 @@ const VVS_GROUPS=[
   ]},
 ];
 function vvsGren(){return (GRENADIER.find(x=>x.id===state.vvs.grenadier)||{mult:1}).mult;}
-function vvsKillR(c){ if(!c.s||!c.s.ammo.explosiondamage)return 0; const ed=Math.floor(c.s.ammo.explosiondamage*vvsGren()), r=c.s.ammo.explosionradius||0; return (ed>TARGET_HP&&r>0)?r*(1-TARGET_HP/ed):0; }
+function vvsKillR(c){ if(!c.s||!c.s.ammo.explosiondamage)return 0; const hs=(HEAVYSET.find(x=>x.id===state.vvs.heavyset)||{mult:1}).mult; const ed=Math.floor(c.s.ammo.explosiondamage*vvsGren()*hs), r=c.s.ammo.explosionradius||0; return (ed>TARGET_HP&&r>0)?r*(1-TARGET_HP/ed):0; }
 function vvsShot(c){
   if(!c.s) return {n:Infinity,d:"\u2014"};
   const freeFire=(typeof VEHICLE_FREE_FIRE_CATEGORIES!=="undefined")&&VEHICLE_FREE_FIRE_CATEGORIES.includes(c.v.category);
@@ -1915,9 +1917,27 @@ function vehVersusChart(series,opts={}){
   let grid="";
   for(let i=0;i*yStep<=yMax+1e-4;i++){const v=i*yStep;grid+='<line x1="'+pad.l+'" y1="'+Y(v)+'" x2="'+(W-pad.r)+'" y2="'+Y(v)+'" stroke="#ffffff0e"/><text x="'+(pad.l-5)+'" y="'+(Y(v)+4)+'" fill="#8a8770" font-size="12" text-anchor="end" font-family="JetBrains Mono">'+fx(v,ydec)+'</text>';}
   for(let i=0;i*xStep<=maxD+1e-4;i++){const d=i*xStep;grid+='<text x="'+X(d)+'" y="'+(H-8)+'" fill="#8a8770" font-size="12" text-anchor="middle" font-family="JetBrains Mono">'+fx(d,xdec)+'</text>';}
-  const lines=series.map(x=>{let p=[];for(let d=0;d<=maxD;d+=maxD/200)p.push(X(d).toFixed(1)+","+Y(valAt(x.s,d)).toFixed(1));return '<polyline points="'+p.join(" ")+'" fill="none" stroke="'+x.color+'" stroke-width="2.5"/>';}).join("");
-  const svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet">'+grid+lines+'</svg>';
-  const box=el("div","mini-chart"); box.innerHTML='<div class="mini-title">'+opts.title+'</div><div class="mc-plot">'+svg+'</div>';
+  const lines=series.map(x=>{let p=[];for(let d=0;d<=maxD;d+=maxD/220)p.push(X(d).toFixed(1)+","+Y(valAt(x.s,d)).toFixed(1));return '<polyline points="'+p.join(" ")+'" fill="none" stroke="'+x.color+'" stroke-width="2.5"/>';}).join("");
+  const uid=mode;
+  const dots=series.map((x,i)=>'<circle id="vvc'+uid+i+'" r="3.5" fill="'+x.color+'" style="opacity:0"/>').join("");
+  const svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet">'+grid+lines+'<line id="vvcl'+uid+'" y1="'+pad.t+'" y2="'+(pad.t+ih)+'" stroke="#f4efdc" stroke-width="1" opacity="0"/>'+dots+'</svg>';
+  const box=el("div","mini-chart"); box.innerHTML='<div class="mini-title">'+opts.title+'</div><div class="dmg-plot">'+svg+'<div class="dmg-tip" id="vvsTip'+uid+'"></div></div>';
+  const plot=box.querySelector(".dmg-plot"), svgEl=plot.querySelector("svg"), tip=plot.querySelector("#vvsTip"+uid), cl=plot.querySelector("#vvcl"+uid);
+  const unit=mode==="pen"?" mm":(mode==="dps"?" hp/s":" hp");
+  const move=ev=>{
+    const rect=svgEl.getBoundingClientRect();
+    const px=(ev.touches?ev.touches[0].clientX:ev.clientX)-rect.left, svgX=px/rect.width*W;
+    let d=(svgX-pad.l)/iw*maxD; d=Math.max(0,Math.min(maxD,d));
+    const vx=X(d); cl.setAttribute("x1",vx); cl.setAttribute("x2",vx); cl.setAttribute("opacity",".5");
+    let rows="";
+    series.forEach((x,i)=>{const v=valAt(x.s,d);const dot=plot.querySelector("#vvc"+uid+i);dot.setAttribute("cx",vx);dot.setAttribute("cy",Y(v));dot.style.opacity=1;
+      rows+='<div style="color:'+x.color+'">'+Math.round(v)+unit+" — "+x.name+"</div>";});
+    tip.style.opacity=1; tip.style.left=Math.min(rect.width-150,px+12)+"px";
+    tip.innerHTML='<b>'+fx(d,xdec)+' m</b>'+rows;
+  };
+  const leave=()=>{cl.setAttribute("opacity","0");series.forEach((x,i)=>plot.querySelector("#vvc"+uid+i).style.opacity=0);tip.style.opacity=0;};
+  svgEl.addEventListener("mousemove",move); svgEl.addEventListener("mouseleave",leave);
+  svgEl.addEventListener("touchmove",move,{passive:true}); svgEl.addEventListener("touchend",leave);
   return box;
 }
 
