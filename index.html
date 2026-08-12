@@ -1602,7 +1602,6 @@ function renderVehicleDetail(){
 
   // ===== VEHICLE section =====
   const vhead=el("div","stat-group sec-head"); vhead.appendChild(el("h3",null,"Vehicle")); R.appendChild(vhead);
-  const arm=v.hitPoints&&v.armorHPMul?v.hitPoints*v.armorHPMul:0;
   // Only sidecar bikes can mount an LMG. They spawn for the same base as the plain bike,
   // and mounting raises it: Tier 1 LMG +92, Tier 2 LMG (or .50 cal for US/SU) +180.
   // Mountable armament: sidecar bikes + non-amphibious infantry jeeps. Mounting an LMG
@@ -1632,8 +1631,7 @@ function renderVehicleDetail(){
   ].filter(Boolean);
   const durabilityCells=[
     v.hitPoints?cell("Hit points",fmt(v.hitPoints),"hp",{hot:true,w:"n"}):null,
-    v.armorHPMul?cell("Armor mult",fmt(v.armorHPMul,v.armorHPMul%1===0?0:2),"×",{w:"n"}):null,
-    arm?cell("Effective armor",fmt(arm),"hp",{hot:true,w:"n"}):null,
+    v.armorHPMul?cell("Armor HP ×",fmt(v.armorHPMul,v.armorHPMul%1===0?0:2),"×",{w:"n"}):null,
   ].filter(Boolean);
   const costCells=[
     (spawnVal!=null)?cell(spawnLabel,cr(fmt(spawnVal)),"",{hot:true,w:"n"}):null,
@@ -1764,7 +1762,7 @@ const VCOLS=[
   {k:"category",label:"Class",num:false,get:(v,s)=>v.category},
   {k:"gun",label:"Main weapon",num:false,get:(v,s)=>v.mainWeapon?v.mainWeapon.name:"\u2014"},
   {k:"hp",label:"HP",get:(v,s)=>v.hitPoints||0},
-  {k:"armor",label:"Eff. armor",get:(v,s)=>(v.hitPoints||0)*(v.armorHPMul||0)},
+  {k:"armor",label:"Armor ×",get:(v,s)=>v.armorHPMul||0},
   {k:"speed",label:"km/h",get:(v,s)=>v.speed||0},
   {k:"pen",label:"Pen mm",get:(v,s)=>s?s.penMax:0},
   {k:"admg",label:"Armor dmg",get:(v,s)=>s?s.armorMax:0},
@@ -1791,6 +1789,7 @@ function renderVehicleTable(){
       if(c.k==="name")val=`<span class="faction-dot" style="background:${fac.color}"></span>${val}`;
       else if(c.k==="spawn")val=(v.spawnCost==null?"\u2014":fmt(v.spawnCost));
       else if(c.k==="pen"||c.k==="admg")val=(s?fmt(val):"\u2014");
+      else if(c.k==="armor")val=fmt(val,val%1===0?0:2)+"×";
       else if(c.num!==false)val=fmt(val);
       r.appendChild(el("td",null,val));});
     r.onclick=()=>selectVehicle(v.id);
@@ -1803,7 +1802,7 @@ function renderVehicleTable(){
 const VVS_GROUPS=[
   {title:"Vehicle",rows:[
     {label:"Hit points",get:c=>c.v.hitPoints||0,better:"up"},
-    {label:"Effective armor",get:c=>(c.v.hitPoints||0)*(c.v.armorHPMul||0),better:"up"},
+    {label:"Armor HP ×",get:c=>c.v.armorHPMul||0,disp:c=>fmt(c.v.armorHPMul,c.v.armorHPMul%1===0?0:2)+"×",better:"up"},
     {label:"Top speed",get:c=>c.v.speed||0,unit:"km/h",better:"up"},
     {label:"Mass",get:c=>(c.v.mass||0)/1000,dd:1,unit:"t",better:"down"},
     {label:"Spawn cost",get:c=>c.v.spawnCost==null?Infinity:c.v.spawnCost,disp:c=>c.v.spawnCost==null?"\u2014":cr(fmt(c.v.spawnCost)),better:"down"},
