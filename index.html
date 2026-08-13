@@ -10,8 +10,8 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-title" content="H&G Armory" />
 <link rel="manifest" href="/site.webmanifest" />
-<meta name="description" content="H&amp;G Armory is a free Heroes &amp; Generals weapon stats database and comparison tool. Compare damage, DPS, time-to-kill, recoil, accuracy, armor penetration and reload times for every rifle, SMG, LMG, pistol, anti-tank launcher, grenade and mine, with attachments, ammo types and badges.">
-<meta name="keywords" content="Heroes and Generals, H&amp;G, weapon stats, damage calculator, TTK, DPS, gun comparison, Heroes and Generals weapons">
+<meta name="description" content="H&amp;G Armory is a free Heroes &amp; Generals weapon and vehicle stats database and comparison tool. Compare damage, DPS, time-to-kill, recoil, accuracy, armor penetration and reload for every rifle, SMG, LMG, pistol, anti-tank launcher, grenade and mine — plus tanks, tank destroyers, recon vehicles and planes with armor damage, penetration, spawn cost and field maintenance load, all with attachments, ammo types and badges.">
+<meta name="keywords" content="Heroes and Generals, H&amp;G, weapon stats, vehicle stats, tank stats, damage calculator, TTK, DPS, armor penetration, gun comparison, tank comparison, Heroes and Generals weapons, Heroes and Generals vehicles, Heroes and Generals tanks">
 <meta name="author" content="zewm">
 <link rel="canonical" href="https://hng-armory.top/">
 <meta name="robots" content="index, follow">
@@ -20,17 +20,17 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="H&amp;G Armory">
 <meta property="og:url" content="https://hng-armory.top/">
-<meta property="og:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon Stats">
-<meta property="og:description" content="Free Heroes &amp; Generals weapon stats: damage, DPS, time-to-kill, recoil, accuracy and armor penetration for every weapon, with attachments, ammo and badges. Compare any two or three weapons side by side.">
+<meta property="og:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon &amp; Vehicle Stats">
+<meta property="og:description" content="Free Heroes &amp; Generals stats: damage, DPS, time-to-kill, recoil, accuracy and armor penetration for every weapon and vehicle — guns, tanks, tank destroyers and planes — with attachments, ammo, crates and badges. Compare up to three side by side.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon Stats">
-<meta name="twitter:description" content="Free Heroes &amp; Generals weapon stats and comparison tool: damage, DPS, TTK, recoil, accuracy, armor penetration.">
+<meta name="twitter:title" content="H&amp;G Armory — Heroes &amp; Generals Weapon &amp; Vehicle Stats">
+<meta name="twitter:description" content="Free Heroes &amp; Generals weapon and vehicle stats: damage, DPS, TTK, recoil, accuracy and armor penetration. Guns, tanks and planes compared side by side.">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
 "name":"H&G Armory","url":"https://hng-armory.top/",
 "applicationCategory":"GameApplication","operatingSystem":"Any (web browser)",
-"description":"Heroes & Generals weapon stats database and comparison tool covering damage, DPS, time-to-kill, recoil, accuracy, armor penetration and reload times, with attachments, ammunition types and badges.",
+"description":"Heroes & Generals weapon and vehicle stats database and comparison tool covering damage, DPS, time-to-kill, recoil, accuracy, armor penetration, spawn cost and field maintenance load for guns, tanks, tank destroyers and planes, with attachments, ammunition, supply crates and badges.",
 "author":{"@type":"Person","name":"zewm"},
 "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
 "about":{"@type":"VideoGame","name":"Heroes & Generals"}}
@@ -1643,6 +1643,26 @@ function renderVehicleDetail(){
   subgroup("Durability",durabilityCells);
   subgroup("Cost",costCells);
   R.appendChild(vgrid);
+
+  // armor thickness (mm) — hull + turret facings, when documented for this vehicle
+  if(v.armor){
+    const A=v.armor;
+    const am=x=>x%1===0?fmt(x):fmt(x,2);
+    const pair=(u,l)=>(l!=null&&l!==u)?am(u)+" / "+am(l):am(u);
+    const ac=[
+      A.hullFrontUpper!=null?cell("Hull front"+(A.hullFrontLower!=null&&A.hullFrontLower!==A.hullFrontUpper?" · U/L":""),pair(A.hullFrontUpper,A.hullFrontLower),"mm",{hot:true,w:"n"}):null,
+      A.hullSideUpper!=null?cell("Hull side"+(A.hullSideLower!=null&&A.hullSideLower!==A.hullSideUpper?" · U/L":""),pair(A.hullSideUpper,A.hullSideLower),"mm",{w:"n"}):null,
+      A.hullRear!=null?cell("Hull rear",am(A.hullRear),"mm",{w:"n"}):null,
+      A.hullTop!=null?cell("Hull top",am(A.hullTop),"mm",{w:"n"}):null,
+      A.turretFront!=null?cell("Turret front",am(A.turretFront),"mm",{hot:true,w:"n"}):null,
+      A.mantlet!=null?cell("Mantlet",am(A.mantlet),"mm",{w:"n"}):null,
+      A.turretRing!=null?cell("Turret ring",am(A.turretRing),"mm",{w:"n"}):null,
+      A.turretSide!=null?cell("Turret side",am(A.turretSide),"mm",{w:"n"}):null,
+      A.turretRear!=null?cell("Turret rear",am(A.turretRear),"mm",{w:"n"}):null,
+      A.turretTop!=null?cell("Turret top",am(A.turretTop),"mm",{w:"n"}):null,
+    ].filter(Boolean);
+    R.appendChild(group("Armor · plate thickness",ac));
+  }
 
   // resolve the selected weapon up front (needed for FML, ammo list, and stats)
   let vw=null, noArm=false;
