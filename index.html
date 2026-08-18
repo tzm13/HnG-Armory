@@ -112,19 +112,34 @@ body.veh .topbar{background:linear-gradient(180deg,#1a232b,#111820)}
 .tabs button{background:transparent;border:1px solid transparent;border-bottom:none;padding:7px 16px 6px;font-family:"Oswald";letter-spacing:.1em;text-transform:uppercase;font-size:13px;color:var(--ink-dim);border-radius:var(--radius) var(--radius) 0 0}
 .tabs button[aria-selected="true"]{color:var(--bg);background:var(--brass);font-weight:600}
 
-.sidebar{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;max-height:calc(100vh - 55px)}
-.search{padding:12px}
+.sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;max-height:calc(100vh - 55px)}
+.sb-top{flex:0 0 auto;border-bottom:1px solid var(--line)}
+#wpnList{flex:1 1 auto;overflow-y:auto}
+.search{padding:12px 12px 8px}
+.facchips{display:flex;gap:6px;padding:0 12px 8px;flex-wrap:wrap}
+.facchip{display:flex;align-items:center;gap:5px;padding:4px 9px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;cursor:pointer;color:var(--ink-dim);font-family:"Oswald";text-transform:uppercase;letter-spacing:.08em;font-size:11px;transition:color .12s,background .12s,border-color .12s}
+.facchip .fdot{width:9px;height:9px;border-radius:2px;box-shadow:0 0 0 1px #0004 inset}
+.facchip:hover{color:var(--ink);border-color:var(--brass-dim)}
+.facchip.on{color:var(--ink);background:#2c3020;border-color:var(--brass)}
+body.veh #facChips{display:none}
+.catchips{display:flex;gap:6px;padding:0 12px 12px;flex-wrap:wrap}
+.catchip{width:36px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;cursor:pointer;color:var(--ink-dim);padding:0;transition:color .12s,background .12s,border-color .12s}
+.catchip svg{width:19px;height:19px;fill:currentColor}
+.catchip:hover{color:var(--ink);border-color:var(--brass-dim)}
+.catchip.on{color:var(--bg);background:var(--brass);border-color:var(--brass)}
+body.veh #catChips{display:none}
 .search input{width:100%;background:#12140d;border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:var(--radius);font-family:"JetBrains Mono";font-size:13px}
 .search input::placeholder{color:var(--ink-faint)}
-.faction-head{padding:9px 12px 5px;font-family:"Oswald";text-transform:uppercase;letter-spacing:.14em;font-size:12px;display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);cursor:pointer;user-select:none}
+.faction-head{position:sticky;top:0;z-index:3;background:var(--panel);padding:10px 12px 7px;font-family:"Oswald";text-transform:uppercase;letter-spacing:.14em;font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);cursor:pointer;user-select:none}
 .faction-head:hover{background:var(--panel-2)}
-.faction-head .chip{width:10px;height:10px;border-radius:2px;box-shadow:0 0 0 1px #0004 inset}
-.cat-head{padding:6px 12px 3px 20px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
-.cat-head:hover{color:var(--ink-dim)}
-.cat-head .cnt{margin-left:auto;font-family:"JetBrains Mono";font-size:10px;opacity:.6;letter-spacing:0}
+.faction-head .chip{width:11px;height:11px;border-radius:2px;box-shadow:0 0 0 1px #0004 inset}
+.cat-head{position:sticky;top:35px;z-index:2;background:var(--panel-2);padding:5px 12px 5px 18px;font-family:"Oswald";font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.cat-head:hover{color:var(--brass-hi,#e0b866);background:#20241a}
+.cat-head .cnt{margin-left:auto;font-family:"JetBrains Mono";font-size:10px;opacity:.7;letter-spacing:0;color:var(--ink-faint)}
+.cat-head .tw{color:var(--brass)}
 .tw{display:inline-block;font-size:9px;transition:transform .12s;width:9px;color:var(--ink-faint)}
 .closed .tw{transform:rotate(-90deg)}
-.wpn-item{padding:6px 12px 6px 24px;font-size:14px;color:var(--ink-dim);cursor:pointer;border-left:3px solid transparent;display:flex;justify-content:space-between;gap:8px}
+.wpn-item{padding:6px 12px 6px 28px;font-size:14px;color:var(--ink-dim);cursor:pointer;border-left:3px solid transparent;display:flex;justify-content:space-between;gap:8px}
 .wpn-item:hover{background:var(--panel-2);color:var(--ink)}
 .wpn-item[aria-current="true"]{background:#2c3020;color:var(--ink);border-left-color:var(--brass)}
 body.veh .wpn-item[aria-current="true"]{background:#1f2c34}
@@ -385,7 +400,11 @@ td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{backgro
   </div>
 
   <aside class="sidebar">
-    <div class="search"><input id="search" placeholder="search weapon…" autocomplete="off"></div>
+    <div class="sb-top">
+      <div class="search"><input id="search" placeholder="search weapon…" autocomplete="off"></div>
+      <div class="facchips" id="facChips"></div>
+      <div class="catchips" id="catChips"></div>
+    </div>
     <div id="wpnList"></div>
   </aside>
 
@@ -475,7 +494,7 @@ const MOD_CATEGORIES = { 2:"Barrel", 3:"Bolt / Spring", 4:"Sight", 5:"Trigger" }
 const MOD_ORDER = [4,5,3,2];
 
 const HITBOX = [
-  {id:"torso",label:"Torso",mult:1.00},{id:"head",label:"Head",mult:3.56},
+  {id:"torso",label:"Torso",mult:1.00},{id:"head",label:"Head",mult:3.58},
   {id:"legs",label:"Legs",mult:0.80},{id:"arms",label:"Arms",mult:0.50},
 ];
 const HEAVYSET = [
@@ -585,7 +604,8 @@ function compute(w, cfg){
 
   const dpsNear = dmgNear * rpm/60, dpsFar = dmgFar * rpm/60;
 
-  const hb = HITBOX.find(h=>h.id===cfg.hitbox).mult, hsRaw = HEAVYSET.find(h=>h.id===cfg.heavyset).mult;
+  const headM = (w.weaponcategoryid===17 || (w.weaponcategoryid===4 && (w.defaultAmmo?.damage||0)>0)) ? 4 : HITBOX.find(h=>h.id==="head").mult; // pistols & melee headshot ×4
+  const hb = cfg.hitbox==="head" ? headM : HITBOX.find(h=>h.id===cfg.hitbox).mult, hsRaw = HEAVYSET.find(h=>h.id===cfg.heavyset).mult;
   const hs = cfg.hitbox==="head" ? 1 : hsRaw; // headshots bypass Heavy Set
   const perNear = dmgNear*hb*hs, perFar = dmgFar*hb*hs;
   // effective per-hit damage & dps against the selected hit location + Heavy Set
@@ -626,7 +646,7 @@ function compute(w, cfg){
     armorMin,armorMax,penMin,penMax,penFarMin,penFarMax,armorDPS,
     penNearRange:ammo.armorPenetrationNearRange,penFarRange:ammo.armorPenetrationFarRange,
     reload,mag:w.clipsize,mags:w.clipCount,ep:w.equipmentPointsCost,
-    costPerShot,costPerShotG,costPerMag:costPerShot*w.clipsize,costPerMagG:costPerShotG*w.clipsize,buy,buyG};
+    costPerShot,costPerShotG,costPerMag:costPerShot*w.clipsize,costPerMagG:costPerShotG*w.clipsize,buy,buyG,headMult:headM};
 }
 function dmgAtRange(s,d){
   if(d<=s.rNear) return s.dmgNear;
@@ -647,7 +667,7 @@ const gd=n=>`<span class="gd">${n} g</span>`;
 let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand",
            versus:[{wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[]},
                    {wid:(WEAPONS[1]||WEAPONS[0]).id,ammoId:(WEAPONS[1]||WEAPONS[0]).defaultAmmo.id,modIds:[]},null],
-           spreadRange:100,view:"detail",sort:{key:"name",dir:1},open:{fac:{},cat:{}},secClosed:{},
+           spreadRange:100,view:"detail",sort:{key:"name",dir:1},open:{fac:{},cat:{}},catFilter:[],facFilter:[],secClosed:{},
            cfgOpen:{hitbox:true,heavyset:false,reload:false,ironfist:false,grenadier:false,stance:false},
            vs:{hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"},
            vsBarClosed:false,vsGroupClosed:{},
@@ -687,11 +707,49 @@ function ensureVisible(id){                 // auto-open the group holding the s
   const g=groupOf(w); state.open.fac[g.fac]=true; if(g.cat)state.open.cat[g.fac+":"+g.cat]=true;
 }
 
+// game-level categories for the sidebar filter chips (icon-only, tooltip on hover)
+const GAME_CATS=[
+  {id:"weapons",label:"Weapons",cats:[11,12,13,14,16],
+   icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="46.1 164.1 369.8 371.8"><g transform="translate(0,1254) scale(0.1,-0.1)" fill="currentColor"><path d="M1749 9099 c-93 -74 -119 -100 -119 -120 0 -10 -11 -35 -25 -55 -30 -44 -31 -55 -7 -84 l18 -22 134 112 c74 62 141 118 149 125 11 11 7 20 -24 54 -21 22 -43 41 -50 41 -6 0 -41 -23 -76 -51z"/> <path d="M3311 10304 c-11 -8 -21 -21 -21 -27 0 -14 -68 -72 -232 -199 -58 -46 -137 -107 -174 -135 -37 -29 -77 -53 -89 -53 -20 0 -67 -33 -192 -136 -47 -38 -205 -162 -267 -208 -37 -28 -39 -28 -72 -12 -46 21 -56 20 -84 -9 -21 -23 -22 -36 -6 -75 5 -11 -31 -50 -124 -134 -78 -72 -130 -127 -130 -138 0 -22 28 -68 42 -68 5 0 53 37 106 83 53 46 127 108 164 138 130 106 314 256 416 339 57 47 114 93 127 104 25 20 45 15 45 -13 0 -10 -81 -84 -205 -187 -113 -93 -243 -200 -289 -239 -142 -118 -265 -219 -391 -320 -66 -54 -164 -133 -217 -177 l-97 -80 -26 -87 c-46 -151 -104 -225 -202 -258 -26 -9 -85 -45 -132 -81 -286 -218 -563 -437 -581 -459 -25 -32 -26 -90 -3 -123 55 -79 258 -347 272 -357 29 -22 75 -15 103 15 35 36 255 320 406 522 62 83 91 109 122 110 9 0 30 12 47 28 26 22 37 46 61 137 17 61 49 149 71 198 l40 87 48 -30 c88 -56 187 -37 270 52 71 78 79 156 27 246 -31 52 -38 40 115 175 164 144 720 667 731 687 6 10 10 34 10 53 0 30 11 43 103 125 56 50 149 133 207 185 l105 93 27 -15 c25 -14 31 -14 55 -1 49 28 42 50 -52 153 -48 53 -93 98 -100 101 -7 2 -22 -2 -34 -10z m-1246 -1580 c26 -10 48 -62 40 -100 -7 -39 -55 -98 -96 -120 -57 -29 -127 -8 -149 45 -21 53 10 69 50 26 21 -22 70 -35 70 -18 0 3 -12 27 -27 52 l-26 45 44 38 c44 38 62 44 94 32z"/> <path d="M3677 10657 l-47 -42 20 -30 c11 -16 20 -33 20 -37 0 -3 -55 -50 -122 -104 -68 -53 -127 -101 -132 -105 -5 -4 20 -39 54 -78 l63 -71 56 47 c31 26 90 79 132 117 41 39 112 104 157 144 45 40 82 80 82 89 0 24 -40 73 -59 73 -10 0 -30 -9 -44 -20 -14 -11 -29 -20 -34 -20 -5 0 -24 18 -42 40 -17 22 -37 40 -44 40 -7 0 -33 -19 -60 -43z"/></g></svg>'},
+  {id:"pistols",label:"Pistols",cats:[17],
+   icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="463.5 219.2 370.3 273.4"><g transform="translate(0,1254) scale(0.1,-0.1)" fill="currentColor"><path d="M7897 10130 c-14 -12 -28 -35 -32 -57 -4 -21 -12 -41 -18 -45 -7 -4 -522 -8 -1144 -8 -1120 0 -1133 0 -1153 20 -11 11 -20 28 -20 38 0 32 -29 62 -60 62 -33 0 -57 -27 -66 -75 -4 -24 -15 -35 -47 -51 -32 -14 -50 -33 -76 -76 -19 -32 -39 -58 -46 -58 -7 0 -37 16 -66 36 -68 46 -91 54 -112 43 -27 -15 -20 -37 24 -87 80 -90 98 -170 57 -252 -24 -48 -77 -90 -112 -90 -33 0 -85 -37 -92 -66 -4 -16 -1 -39 9 -59 13 -26 29 -38 95 -64 142 -57 206 -137 206 -256 -1 -64 -4 -74 -297 -796 -57 -141 -107 -268 -111 -283 -10 -39 10 -98 42 -129 39 -38 88 -44 476 -57 319 -11 330 -11 355 8 34 25 39 72 11 116 l-21 34 111 339 c60 186 120 365 133 398 36 94 40 95 342 95 l250 0 60 28 c106 51 157 130 180 282 14 96 29 131 71 174 61 60 62 61 399 66 207 3 317 9 330 17 13 7 101 12 252 15 139 2 236 7 242 13 6 6 13 55 17 109 6 89 5 100 -11 112 -15 11 -71 14 -246 14 l-228 0 -65 -55 -65 -55 -1115 -2 c-1163 -1 -1168 -1 -1135 38 8 10 42 14 123 15 61 1 121 4 134 7 19 6 32 31 71 135 52 137 61 153 85 144 18 -7 11 -36 -40 -167 -19 -49 -34 -94 -34 -100 0 -5 11 -10 23 -10 22 0 29 14 74 137 34 96 54 139 66 141 32 6 28 -26 -17 -149 l-44 -124 101 -6 c56 -4 456 -7 889 -8 l787 -1 46 40 c82 71 76 70 357 70 213 0 257 2 276 16 21 14 22 22 22 138 0 110 -2 126 -21 150 -12 15 -30 26 -45 26 -26 0 -29 4 -39 62 -10 62 -86 89 -138 48z m-1294 -819 c73 -45 109 -151 84 -247 -17 -66 -60 -119 -123 -150 -46 -22 -62 -25 -195 -25 -100 -1 -156 3 -184 13 -58 20 -155 85 -155 103 0 19 56 194 81 251 12 30 26 44 50 53 17 6 33 11 35 11 2 0 -8 -24 -21 -52 -52 -117 -39 -231 34 -309 39 -40 70 -49 90 -25 9 11 7 26 -9 65 -40 103 -18 212 60 293 l49 51 84 -5 c64 -3 92 -9 120 -27z"/></g></svg>'},
+  {id:"explosives",label:"Explosives",cats:[5,6,7,8,9],
+   icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="932.5 182.8 250.9 339.4"><g transform="translate(0,1254) scale(0.1,-0.1)" fill="currentColor"><path d="M9595 8930 c-61 -25 -83 -86 -87 -232 -3 -95 -1 -110 18 -135 35 -47 57 -53 215 -53 186 0 179 -6 180 156 0 65 4 146 8 178 12 92 4 96 -171 95 -79 0 -152 -4 -163 -9z"/> <path d="M9589 8415 c-35 -19 -53 -65 -44 -112 9 -51 55 -202 71 -235 26 -51 76 -71 190 -76 56 -2 114 -2 128 2 45 11 47 30 20 222 -21 148 -29 182 -46 197 -17 14 -41 17 -157 17 -98 -1 -143 -5 -162 -15z"/> <path d="M9803 9441 c-62 -38 -193 -266 -193 -336 0 -16 12 -38 29 -56 29 -29 30 -29 155 -29 123 0 125 0 145 26 12 15 21 38 21 51 0 24 12 81 52 244 12 47 19 93 15 102 -10 26 -180 24 -224 -2z"/> <path d="M9745 7890 c-26 -29 -14 -68 49 -165 71 -109 159 -197 212 -213 100 -29 112 -10 72 107 -16 47 -38 124 -49 171 -29 119 -30 120 -159 120 -94 0 -109 -2 -125 -20z"/> <path d="M10154 7913 c-18 -2 -40 -13 -49 -23 -17 -18 -17 -24 4 -107 38 -154 70 -249 89 -266 15 -14 40 -17 133 -17 77 0 121 4 132 13 16 11 59 146 92 285 16 68 11 93 -25 112 -18 9 -305 12 -376 3z"/> <path d="M10135 9445 c-14 -14 -32 -67 -57 -170 -53 -218 -53 -210 -29 -234 20 -20 32 -21 286 -21 l265 0 17 26 c16 24 16 31 -1 115 -24 129 -57 264 -67 280 -6 11 -50 15 -201 19 -183 5 -194 4 -213 -15z"/> <path d="M10036 8917 c-22 -22 -24 -34 -31 -186 -7 -153 -6 -165 12 -190 l20 -26 285 -3 c280 -2 285 -2 313 20 l28 22 -6 165 c-3 91 -8 173 -12 182 -13 34 -51 39 -321 39 -264 0 -265 0 -288 -23z"/> <path d="M10037 8412 c-22 -24 -21 -74 3 -242 15 -104 24 -139 40 -155 19 -19 34 -20 245 -22 287 -2 264 -17 299 198 31 187 31 194 6 219 -19 19 -33 20 -298 20 -258 0 -280 -1 -295 -18z"/> <path d="M10113 9825 c-37 -16 -44 -27 -83 -139 -35 -99 -36 -108 -12 -129 17 -15 56 -17 360 -17 230 0 343 3 347 11 4 5 -20 38 -53 73 -34 35 -75 92 -95 132 l-36 71 -77 6 c-133 12 -316 8 -351 -8z"/> <path d="M10069 10501 c-23 -24 -29 -38 -29 -74 0 -38 7 -54 53 -112 l52 -68 3 -179 3 -178 188 0 188 0 5 103 c4 88 9 112 37 172 17 39 45 87 61 107 19 23 30 48 30 68 0 45 47 90 94 90 19 0 38 -5 41 -11 6 -9 112 -4 123 6 10 9 -33 69 -61 85 -30 19 -53 20 -395 20 l-364 0 -29 -29z"/> <path d="M10774 7913 c-71 -3 -95 -8 -106 -21 -8 -9 -27 -64 -42 -122 -15 -58 -37 -135 -48 -173 -16 -54 -18 -70 -8 -82 16 -19 63 -19 105 1 64 30 187 172 241 276 27 53 30 77 12 101 -17 21 -42 24 -154 20z"/> <path d="M10644 9435 c-3 -14 3 -62 14 -108 35 -139 52 -217 52 -243 0 -13 9 -33 20 -44 18 -18 33 -20 144 -20 142 0 170 12 182 76 6 31 -1 51 -45 138 -99 197 -134 226 -275 226 -83 0 -86 -1 -92 -25z"/> <path d="M10753 8408 c-14 -16 -24 -49 -32 -113 -7 -49 -19 -125 -27 -169 -18 -98 -18 -92 6 -116 17 -17 33 -20 125 -20 190 0 220 26 279 243 30 109 27 136 -16 172 -28 24 -35 25 -172 25 -135 0 -144 -1 -163 -22z"/> <path d="M10754 8926 c-18 -14 -19 -26 -16 -193 3 -133 7 -184 18 -200 14 -22 20 -23 167 -23 134 0 156 2 185 20 47 29 55 58 48 182 -8 134 -21 176 -65 205 -31 21 -45 23 -176 23 -106 0 -146 -4 -161 -14z"/> <path d="M10942 10210 c-63 -28 -110 -68 -137 -115 -39 -65 -35 -75 30 -75 51 0 57 -3 96 -42 22 -24 72 -89 110 -146 65 -96 71 -102 92 -91 32 17 107 91 107 107 0 7 -35 68 -78 135 -43 67 -96 150 -118 184 -21 35 -43 63 -49 63 -5 0 -29 -9 -53 -20z"/> <path d="M10930 10391 c-45 -10 -146 -63 -186 -98 -54 -48 -101 -119 -124 -189 -18 -54 -22 -82 -18 -154 4 -77 9 -98 41 -162 64 -128 171 -211 309 -240 76 -16 180 1 265 43 162 78 258 255 234 429 -34 251 -273 421 -521 371z m173 -106 c100 -26 163 -79 218 -185 33 -64 34 -195 1 -261 -93 -190 -320 -250 -486 -129 -57 42 -112 128 -126 197 -35 166 71 334 239 379 62 17 87 17 154 -1z"/> <path d="M11367 9612 c-14 -15 -49 -41 -77 -57 -27 -17 -50 -35 -50 -42 0 -6 24 -69 54 -140 147 -348 198 -632 198 -1104 0 -297 4 -330 42 -337 77 -15 99 48 114 339 18 335 -26 728 -113 1016 -29 94 -121 333 -133 345 -5 5 -20 -4 -35 -20z"/></g></svg>'},
+  {id:"melee",label:"Melee",cats:[],
+   icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="205.5 679.4 371.2 386.3"><g transform="translate(0,1254) scale(0.1,-0.1)" fill="currentColor"><path d="M2522 2666 c-30 -42 -34 -44 -91 -48 -118 -8 -178 -77 -168 -193 6 -77 32 -128 108 -209 107 -115 226 -154 323 -106 59 29 89 78 94 156 4 59 7 66 43 99 22 19 39 38 39 41 0 12 -294 304 -305 304 -7 0 -26 -20 -43 -44z m26 -274 c17 -22 15 -39 -8 -62 -24 -24 -47 -25 -72 -3 -25 22 -23 59 4 77 25 18 56 13 76 -12z"/> <path d="M2763 2964 c-21 -9 -163 -174 -163 -190 0 -18 304 -324 322 -324 15 0 188 170 188 185 0 10 -321 335 -330 334 -3 0 -10 -3 -17 -5z"/> <path d="M2911 3123 c-44 -49 -81 -95 -81 -103 0 -8 74 -89 165 -180 l165 -164 97 97 97 97 -59 63 c-190 198 -272 277 -287 277 -9 0 -53 -39 -97 -87z"/> <path d="M3147 3362 c-48 -48 -87 -92 -87 -99 0 -6 75 -86 166 -177 120 -121 170 -164 180 -158 27 15 164 173 164 189 0 16 -311 333 -327 333 -5 0 -48 -39 -96 -88z"/> <path d="M3290 3851 c-16 -31 -14 -36 55 -113 55 -60 65 -77 65 -108 0 -38 -23 -67 -82 -105 -16 -9 -28 -23 -28 -30 0 -6 70 -83 156 -169 l157 -158 61 66 c34 36 70 66 80 66 11 0 67 -47 125 -104 88 -87 109 -103 124 -95 20 12 23 79 4 121 -12 27 -112 131 -465 481 -156 155 -171 167 -205 167 -26 0 -39 -6 -47 -19z"/> <path d="M5420 5449 c-69 -49 -197 -138 -285 -198 -88 -59 -193 -131 -234 -159 -41 -29 -144 -121 -230 -206 -377 -373 -1101 -1104 -1101 -1113 0 -5 77 -85 170 -178 l171 -168 447 451 c246 248 526 532 623 629 96 98 201 210 231 249 116 147 226 340 287 504 45 120 76 282 54 279 -5 0 -64 -41 -133 -90z m-646 -675 c6 -17 -61 -89 -558 -591 -137 -139 -257 -253 -267 -253 -20 0 -32 26 -21 45 4 8 185 194 402 413 389 393 428 427 444 386z"/></g></svg>'},
+  {id:"fieldgear",label:"Field Gear",cats:[4],
+   icon:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="650.8 667.5 369.9 387.3"><g transform="translate(0,1254) scale(0.1,-0.1)" fill="currentColor"><path d="M9308 5650 c-300 -51 -539 -274 -599 -559 -11 -51 -8 -179 7 -318 7 -67 -16 -139 -63 -196 -31 -37 -358 -369 -1573 -1599 -203 -206 -324 -336 -340 -366 -21 -39 -25 -61 -25 -132 0 -73 4 -92 27 -136 51 -98 131 -144 248 -144 135 0 122 -11 572 470 1121 1197 1502 1594 1573 1636 37 21 51 23 165 23 140 -1 218 14 309 61 136 68 259 189 319 313 40 83 72 227 71 318 -1 91 -18 163 -40 167 -10 2 -102 -79 -232 -203 -257 -244 -235 -235 -398 -152 -88 44 -107 58 -122 89 -24 49 -35 214 -18 257 7 16 49 64 94 107 283 269 339 325 334 338 -11 29 -198 44 -309 26z m-620 -1409 c3 -19 -60 -87 -345 -375 -191 -193 -492 -498 -667 -678 -175 -180 -325 -329 -333 -332 -20 -8 -53 11 -53 31 0 9 213 231 474 492 261 262 566 570 679 685 208 213 237 234 245 177z m-1618 -1626 c41 -21 70 -74 70 -126 0 -135 -171 -190 -249 -80 -45 63 -35 137 25 191 28 24 44 30 80 30 25 0 58 -7 74 -15z"/></g></svg>'},
+];
+function gameCatOf(w){ const e=GAME_CATS.find(g=>g.cats.includes(w.weaponcategoryid)); return e?e.id:"other"; }
+const FAC_CHIPS=[{id:"1"},{id:"2"},{id:"3"},{id:"misc"}]; // US / GE / SU / Shared+gear
+function facLabel(id){ return id==="misc"?"Misc":({1:"US",2:"GE",3:"SU"}[id]||id); }
+function facColor(id){ return (FACTIONS[id==="misc"?0:id]||{color:"#888"}).color; }
+function buildFacChips(){
+  const host=$("#facChips"); if(!host)return; host.innerHTML="";
+  FAC_CHIPS.forEach(fc=>{
+    const b=el("button","facchip"+(state.facFilter.includes(fc.id)?" on":""));
+    b.innerHTML=`<span class="fdot" style="background:${facColor(fc.id)}"></span>${facLabel(fc.id)}`;
+    b.title=(FACTIONS[fc.id==="misc"?0:fc.id]||{}).name||facLabel(fc.id);
+    b.onclick=()=>{const i=state.facFilter.indexOf(fc.id);if(i>=0)state.facFilter.splice(i,1);else state.facFilter.push(fc.id);buildFacChips();buildSidebar($("#search").value);};
+    host.appendChild(b);
+  });
+}
+function buildChips(){
+  const host=$("#catChips"); if(!host)return; host.innerHTML="";
+  GAME_CATS.forEach(g=>{
+    const b=el("button","catchip"+(state.catFilter.includes(g.id)?" on":""));
+    b.innerHTML=g.icon; b.title=g.label; b.setAttribute("aria-label",g.label);
+    b.onclick=()=>{ const i=state.catFilter.indexOf(g.id); if(i>=0)state.catFilter.splice(i,1); else state.catFilter.push(g.id); buildChips(); buildSidebar($("#search").value); };
+    host.appendChild(b);
+  });
+}
 function buildSidebar(filter=""){
   if(state.mode==="veh") return buildVehicleSidebar(filter);
   const list=$("#wpnList"); list.innerHTML="";
-  const f=filter.trim().toLowerCase(), searching=!!f;
-  const shown=WEAPONS.filter(w=>!f||w.name.toLowerCase().includes(f));
+  const f=filter.trim().toLowerCase(), searching=!!f, chipActive=state.catFilter.length>0, facActive=state.facFilter.length>0, forceOpen=searching||chipActive||facActive;
+  const shown=WEAPONS.filter(w=>(!f||w.name.toLowerCase().includes(f))
+    && (!chipActive||state.catFilter.includes(gameCatOf(w)))
+    && (!facActive||state.facFilter.includes(groupOf(w).fac)));
 
   // ----- Misc group (shared/other + all equipment), flat list -----
   const misc=shown.filter(w=>groupOf(w).fac==="misc");
@@ -705,10 +763,10 @@ function buildSidebar(filter=""){
   const catOrder=lbl=>{const e=Object.values(CAT_MERGE).find(x=>x.label===lbl);return e?e.order:99;};
 
   const factionBlock=(facKey,facName,facColor,cats,flatItems)=>{
-    const fOpen=searching || !!state.open.fac[facKey];
+    const fOpen=forceOpen || state.open.fac[facKey]!==false;
     const fh=el("div","faction-head"+(fOpen?"":" closed"),
       `<span class="tw">▾</span><span class="chip" style="background:${facColor}"></span>${facName}`);
-    fh.onclick=()=>{state.open.fac[facKey]=!state.open.fac[facKey];buildSidebar(filter);};
+    fh.onclick=()=>{state.open.fac[facKey]=state.open.fac[facKey]===false?true:false;buildSidebar(filter);};
     list.appendChild(fh);
     if(!fOpen)return;
     if(flatItems){                                   // Misc: no sub-categories
@@ -716,7 +774,7 @@ function buildSidebar(filter=""){
       return;
     }
     Object.keys(cats).sort((a,b)=>catOrder(a)-catOrder(b)||a.localeCompare(b)).forEach(cat=>{
-      const key=facKey+":"+cat, cOpen=searching || !!state.open.cat[key], items=cats[cat];
+      const key=facKey+":"+cat, cOpen=forceOpen || !!state.open.cat[key], items=cats[cat];
       const ch=el("div","cat-head"+(cOpen?"":" closed"),
         `<span class="tw">▾</span>${cat}<span class="cnt">${items.length}</span>`);
       ch.onclick=()=>{state.open.cat[key]=!state.open.cat[key];buildSidebar(filter);};
@@ -1166,7 +1224,7 @@ function metricChart(s,opts){
 
 // the 2x2 combat curves (damage / dps / htk / ttk over distance, after hitbox+HS)
 function combatGraphs(s){
-  const hb=HITBOX.find(h=>h.id===state.hitbox).mult, hs=state.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.heavyset).mult, mul=hb*hs;
+  const hb=state.hitbox==="head"?s.headMult:HITBOX.find(h=>h.id===state.hitbox).mult, hs=state.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.heavyset).mult, mul=hb*hs;
   const dmg=d=>dmgAtRange(s,d)*mul;
   const htk=d=>Math.max(1,Math.ceil(TARGET_HP/(dmgAtRange(s,d)*mul)));
   const ttk=d=>(htk(d)-1)*(60/s.rpm)*1000;
@@ -1448,9 +1506,11 @@ function renderVersus(){
 
 function versusChart(series,opts={}){
   const mode=opts.mode||"damage";
-  const hb=HITBOX.find(h=>h.id===state.vs.hitbox).mult, hs=state.vs.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.vs.heavyset).mult, mul=hb*hs;
+  const hbOther=HITBOX.find(h=>h.id===state.vs.hitbox).mult, hsBadge=state.vs.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.vs.heavyset).mult;
+  const mulOf=s=>(state.vs.hitbox==="head"?(s.headMult||hbOther):hbOther)*hsBadge; // per-weapon head mult
   // metric per series at distance d
   const valAt=(s,d)=>{
+    const mul=mulOf(s);
     if(mode==="damage")return dmgAtRange(s,d)*mul; // effective damage — respects hit location & Heavy Set
     const per=dmgAtRange(s,d)*mul;
     const htk=Math.max(1,Math.ceil(TARGET_HP/per));
@@ -2077,7 +2137,7 @@ $("#search").oninput=e=>buildSidebar(e.target.value);
 // app builds everything client-side. Once the interactive UI is up, it's redundant.
 (function(){const s=document.getElementById("seoIntro"); if(s)s.style.display="none";})();
 
-ensureVisible(state.wid); buildSidebar(); renderDetail();
+ensureVisible(state.wid); buildFacChips(); buildChips(); buildSidebar(); renderDetail();
 </script>
 </body>
 </html>
