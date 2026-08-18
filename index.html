@@ -1451,7 +1451,7 @@ function versusChart(series,opts={}){
   const hb=HITBOX.find(h=>h.id===state.vs.hitbox).mult, hs=state.vs.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.vs.heavyset).mult, mul=hb*hs;
   // metric per series at distance d
   const valAt=(s,d)=>{
-    if(mode==="damage")return dmgAtRange(s,d);
+    if(mode==="damage")return dmgAtRange(s,d)*mul; // effective damage — respects hit location & Heavy Set
     const per=dmgAtRange(s,d)*mul;
     const htk=Math.max(1,Math.ceil(TARGET_HP/per));
     return (htk-1)*(60/s.rpm)*1000; // ms
