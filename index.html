@@ -114,7 +114,11 @@ body.veh .topbar{background:linear-gradient(180deg,#1a232b,#111820)}
 
 .sidebar{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;max-height:calc(100vh - 55px)}
 .sb-top{flex:0 0 auto;border-bottom:1px solid var(--line)}
-#wpnList{flex:1 1 auto;overflow-y:auto}
+#wpnList{flex:1 1 auto;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#wpnList::-webkit-scrollbar{width:11px}
+#wpnList::-webkit-scrollbar-track{background:transparent}
+#wpnList::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;border:3px solid var(--panel);background-clip:padding-box}
+#wpnList::-webkit-scrollbar-thumb:hover{background:var(--brass-dim);border-color:var(--panel);background-clip:padding-box}
 .search{padding:12px 12px 8px}
 .facchips{display:flex;gap:6px;padding:0 12px 8px;flex-wrap:wrap}
 .facchip{display:flex;align-items:center;gap:5px;padding:4px 9px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;cursor:pointer;color:var(--ink-dim);font-family:"Oswald";text-transform:uppercase;letter-spacing:.08em;font-size:11px;transition:color .12s,background .12s,border-color .12s}
