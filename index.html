@@ -1081,7 +1081,6 @@ function renderEquipment(R,w){
     cell("Type",CATEGORIES[w.weaponcategoryid]||"Equipment",""),
     base?cell("Melee damage",fmt(base),"hp",{}):null,
     base?cell(effLabel,fmt(eff),"hp",{hot:true}):null,
-    a.rangemax?cell("Range / reach",fmt(a.rangemax),"m",{}):null,
     cell("Equipment pts",w.equipmentPointsCost,""),
   ].filter(Boolean)));
   R.appendChild(group("Economy",[
