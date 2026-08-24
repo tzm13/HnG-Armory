@@ -300,8 +300,13 @@ body.veh .seg button:not([aria-pressed="true"]),body.veh .cfg-sel select,body.ve
 .rng::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--brass);cursor:pointer;border:2px solid #161810}
 .rng::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--brass);cursor:pointer;border:2px solid #161810}
 .spread-panes{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.fire-wrap{max-width:360px;margin:0 auto}
+.fire-pane{width:100%}
+.fire-wrap svg{max-height:300px;display:block;margin:0 auto}
 @media(max-width:560px){.spread-panes{grid-template-columns:1fr}}
 .spread-cap{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px;text-align:center}
+.rc-cap{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left}
+.rc-seg{transform:scale(.82);transform-origin:right center}
 .hb-legend{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px;font-family:"JetBrains Mono";font-size:11px;color:var(--ink-dim)}
 .hb-legend span{display:inline-flex;align-items:center;gap:4px;opacity:.7}
 .hb-legend span.on{opacity:1;color:var(--ink)}
@@ -682,7 +687,7 @@ let state={wid:WEAPONS[0].id,ammoId:WEAPONS[0].defaultAmmo.id,modIds:[],hitbox:"
            vs:{hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"},
            vsBarClosed:false,vsGroupClosed:{},
            mode:"inf",vid:(typeof VEHICLES!=="undefined"?VEHICLES[0].id:null),vweap:0,vAmmoId:null,vModIds:[],
-           vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{},vCatFilter:[],vFacFilter:[],silTarget:null,
+           vhitbox:"torso",vheavyset:"none",vgunner:"none",vgrenadier:"none",vopen:{},vCatFilter:[],vFacFilter:[],silTarget:null,recoilMode:"average",
            vmg:"none",vcrate:"none",vcrate2:"none",vmgOpen:false,cratesOpen:false,vsort:{key:"name",dir:1},
            vversus:[],vvs:{heavyset:"none",gunner:"none",grenadier:"none"},vvsBarClosed:false,vvsGroupClosed:{}};
 let lastCone=0; // current cone-of-fire (deg) for the spread visual
@@ -1104,7 +1109,7 @@ function buildAccuracy(opts={}){
     '<div class="seg sil-seg" id="silSeg" style="margin-left:auto"></div></div>');
   const spreadCap=lastTarget==="tank"?"Spread vs an M5A1 Stuart":"Spread vs a soldier";
   let paneHTML='<div><div class="spread-cap" id="silCap">'+spreadCap+'</div><div id="silhouetteBox"></div></div>';
-  if(lastRecoil) paneHTML+='<div><div class="spread-cap">Recoil pattern (one mag)</div><div id="recoilBox"></div></div>';
+  if(lastRecoil) paneHTML+='<div><div class="spread-cap rc-cap">Recoil pattern (one mag)<div class="seg rc-seg" id="recoilSeg"></div></div><div id="recoilBox"></div></div>';
   const panes=el("div","spread-panes "+(lastRecoil?"spread-panes-2":"spread-panes-1"),paneHTML);
   wrap.appendChild(head); wrap.appendChild(panes);
   setTimeout(()=>{
@@ -1112,28 +1117,34 @@ function buildAccuracy(opts={}){
     const ss=document.getElementById("silSeg");
     const silItems=[{id:"soldier",label:"Soldier"},{id:"tank",label:"Tank"}];
     const pickSil=id=>{state.silTarget=id;lastTarget=id;
-      seg(ss,silItems,state.silTarget,pickSil); // re-render so the highlight follows the pick
+      seg(ss,silItems,state.silTarget,pickSil);
       const cap=document.getElementById("silCap"); if(cap)cap.textContent=id==="tank"?"Spread vs an M5A1 Stuart":"Spread vs a soldier";
       updateSpread();};
     if(ss) seg(ss,silItems,state.silTarget,pickSil);
+    const rs=document.getElementById("recoilSeg");
+    if(rs){
+      const rcItems=[{id:"example",label:"Example"},{id:"average",label:"Average"}];
+      const pickRc=id=>{state.recoilMode=id; seg(rs,rcItems,state.recoilMode,pickRc); updateSpread();};
+      seg(rs,rcItems,state.recoilMode||"example",pickRc);
+    }
+    updateSpread();
   },0);
   return wrap;
 }
 
 function updateSpread(){
-  const d=state.spreadRange, deg=lastCone, r=coneRadius(deg,d); // ± m
-  const dia=2*r;
+  const d=state.spreadRange, deg=lastCone, r=coneRadius(deg,d), dia=2*r;
   const ro=document.getElementById("spreadReadout");
   if(ro){
     const ref = lastTarget==="tank"
-      ? `≈ ${Math.round(dia/2.26*100)}% of a Stuart's height`   // M5A1 side profile ≈ 2.26 m tall
-      : `≈ ${Math.round(dia/0.5*100)}% of a torso`;             // ~0.5 m torso width
+      ? `≈ ${Math.round(dia/2.26*100)}% of a Stuart's height`
+      : `≈ ${Math.round(dia/0.5*100)}% of a torso`;
     ro.innerHTML =
       `<b>${deg.toFixed(3)}°</b> cone &nbsp;·&nbsp; at <b>${d} m</b> → <b>±${r.toFixed(3)} m</b> `+
       `<span class="dim">(${(dia*100).toFixed(1)} cm across, ${ref})</span>`;
   }
   const sb=document.getElementById("silhouetteBox"); if(sb) sb.innerHTML= lastTarget==="tank"?tankSVG(r):silhouetteSVG(r);
-  const rb=document.getElementById("recoilBox"); if(rb && lastStats) rb.innerHTML=recoilSVG(lastStats,lastStatsBase);
+  const rb=document.getElementById("recoilBox"); if(rb && lastStats) rb.innerHTML=recoilSVG(lastStats,lastStatsBase,state.recoilMode||"example");
 }
 
 // M5A1 Stuart side profile (≈4.34 m long × 2.26 m tall) as the vehicle spread reference.
@@ -1166,6 +1177,15 @@ function tankSVG(r){
 // their real proportions — so a disc bigger than the soldier reads as "you'll miss".
 // Body regions are tinted by their hit-damage multiplier; the selected hitbox is outlined.
 const HB_COLOR={head:"#d24b34",torso:"#c9a24b",legs:"#8a9a56",arms:"#5f6350"};
+// faint 1.8 m soldier used purely as a height reference inside the recoil panel
+function refSoldier(cx,chestY,sc){
+  const Ty=m=>chestY-m*sc, M=m=>m*sc, sw=0.5*sc, hr=0.12*sc;
+  return `<g opacity=".33" fill="var(--ink-faint)" stroke="none">`
+    +`<circle cx="${cx}" cy="${Ty(0.68).toFixed(1)}" r="${hr.toFixed(1)}"/>`
+    +`<path d="M ${(cx-sw/2).toFixed(1)} ${Ty(0.5).toFixed(1)} Q ${cx} ${Ty(0.56).toFixed(1)} ${(cx+sw/2).toFixed(1)} ${Ty(0.5).toFixed(1)} L ${(cx+sw*0.4).toFixed(1)} ${Ty(-0.05).toFixed(1)} L ${(cx-sw*0.4).toFixed(1)} ${Ty(-0.05).toFixed(1)} Z"/>`
+    +`<rect x="${(cx-sw*0.4).toFixed(1)}" y="${Ty(-0.05).toFixed(1)}" width="${(sw*0.36).toFixed(1)}" height="${M(0.94).toFixed(1)}" rx="3"/>`
+    +`<rect x="${(cx+sw*0.04).toFixed(1)}" y="${Ty(-0.05).toFixed(1)}" width="${(sw*0.36).toFixed(1)}" height="${M(0.94).toFixed(1)}" rx="3"/></g>`;
+}
 function silhouetteSVG(r){
   const VB=210, personH=1.8;
   const sceneM=Math.max(personH*1.15, 2*r*1.25, 0.6), k=VB/sceneM;
@@ -1276,53 +1296,56 @@ function recoilPattern(s,n,seed){
   }
   return pts;
 }
-// One fixed scale across ALL weapons (calibrated to the highest-recoil weapon), so a
-// weapon/mod with more recoil literally draws a bigger pattern — and weapons stay comparable.
-const RECOIL_CAP=20; // shots drawn
-let _recoilCalib=null;
-function recoilCalib(){
-  if(_recoilCalib) return _recoilCalib;
-  let maxUp=0.5,maxX=0.3;
-  for(const wp of (typeof WEAPONS!=="undefined"?WEAPONS:[])){
-    if(!(wp.camerarecoilup||wp.camerarecoilright)||!wp.defaultAmmo) continue;
-    let s; try{ s=compute(wp,{ammoId:wp.defaultAmmo.id,modIds:[],hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"}); }catch(e){ continue; }
-    if(!(s.recoilUp||s.recoilRight)) continue;
-    const n=Math.min(wp.clipsize||RECOIL_CAP,RECOIL_CAP);
-    maxUp=Math.max(maxUp,s.recoilUp*n);
-    maxX=Math.max(maxX,(Math.abs(s.recoilRightSigned!=null?s.recoilRightSigned:s.recoilRight)+s.recoilVar)*n);
-  }
-  _recoilCalib={maxUp,maxX};
-  return _recoilCalib;
-}
-function recoilSVG(s,base){
-  const W=300,H=244, botY=H-34, top=24;
-  const n=Math.min(s.mag||20,RECOIL_CAP);
+// Calibrated from in-game measurement: StG44 (no mods), full 30-round mag, first→last
+// bullet ≈ 4.5 m at 10 m. That fixes recoil-units → metres. Each weapon auto-fits the
+// panel (so low-recoil guns stay readable) and the axis is labelled in real metres.
+const REC_M_PER_UNIT_10M=0.10776, REC_REF_DIST=10;
+function recoilSVG(s,base,mode){
+  mode=mode||"example";
+  const W=290,H=252, top=14, botY=H-42, leftPad=30;
+  const n=Math.min(s.mag||20,30), C=REC_M_PER_UNIT_10M;
   const rSign=v=>(v.recoilRightSigned!=null?v.recoilRightSigned:v.recoilRight);
-  const mean=recoilPattern(s,n,null);                       // average climb (fixed recoil only)
-  const sprays=[1,2,3,4].map(sd=>recoilPattern(s,n,sd));    // actual sprays incl. ±variance
+  const mean=recoilPattern(s,n,null);                       // average climb
+  const sprays=[1,2,3,4].map(sd=>recoilPattern(s,n,sd));    // real sprays incl. ±variance
   const changed=base && (Math.abs(s.recoilUp-base.recoilUp)>1e-4||Math.abs(rSign(s)-rSign(base))>1e-4||Math.abs(s.recoilVar-base.recoilVar)>1e-4);
-  const baseMean=changed?recoilPattern(base,n,null):null;   // stock reference, same scale
-  const cx=W/2, panelHW=W/2-22, availH=botY-top-4;
-  const cal=recoilCalib();
-  const scale=Math.min(panelHW/(cal.maxX*1.08), availH/(cal.maxUp*1.08)); // FIXED across all weapons → magnitudes are comparable
-  const PX=x=>cx+x*scale, PY=y=>botY-y*scale;
+  const baseMean=changed?recoilPattern(base,n,null):null;   // stock reference
+  const allRec=[...mean,...sprays.flat(),...(baseMean||[])];
+  const topM=Math.max(0.1,...allRec.map(p=>p.y*C)), maxXM=Math.max(0.04,...allRec.map(p=>Math.abs(p.x)*C));
+  const soldFeet=-0.99, soldHead=0.81;                      // 1.8 m soldier, chest = aim = 0
+  const yHi=Math.max(topM,soldHead), yLo=soldFeet;
+  const availH=botY-top, panelHW=(W-leftPad-10)/2, halfW=Math.max(0.28,maxXM);
+  const scale=Math.min(availH/(yHi-yLo), panelHW/halfW);    // metres → px, soldier keeps a fixed 1.8 m reference
+  const cx=leftPad+(W-leftPad-8)/2, chestY=top+yHi*scale;
+  const PXu=p=>cx+p.x*C*scale, PYu=p=>chestY-p.y*C*scale, PYm=m=>chestY-m*scale;
+  // nice round metre ticks
+  const step=niceStep(Math.max(topM,0.1),4), dec=step>=1?0:(step<0.1?2:1);
+  let rings=`<text x="${leftPad-6}" y="${(chestY+3).toFixed(1)}" fill="var(--ink-faint)" font-size="9.5" text-anchor="end" font-family="JetBrains Mono">0 m</text>`
+    +`<line x1="${leftPad}" y1="${chestY.toFixed(1)}" x2="${W-8}" y2="${chestY.toFixed(1)}" stroke="#ffffff12"/>`;
+  for(let mv=step; mv<=topM+1e-9; mv+=step){ const yy=PYm(mv); if(yy<top) break;
+    rings+=`<line x1="${leftPad}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}" stroke="#ffffff08"/>`
+      +`<text x="${leftPad-6}" y="${(yy+3).toFixed(1)}" fill="var(--ink-faint)" font-size="9.5" text-anchor="end" font-family="JetBrains Mono">${mv.toFixed(dec)}</text>`;
+  }
   const line=(pts,color,width,op,dash,dots)=>{
-    let o=`<polyline points="${pts.map(p=>PX(p.x).toFixed(1)+','+PY(p.y).toFixed(1)).join(' ')}" fill="none" stroke="${color}" stroke-width="${width}" opacity="${op}"${dash?` stroke-dasharray="${dash}"`:''}/>`;
-    if(dots) o+=pts.filter((_,i)=>i%2===0).map(p=>`<circle cx="${PX(p.x).toFixed(1)}" cy="${PY(p.y).toFixed(1)}" r="1.8" fill="${color}" opacity="${op}"/>`).join("");
+    let o=`<polyline points="${pts.map(p=>PXu(p).toFixed(1)+','+PYu(p).toFixed(1)).join(' ')}" fill="none" stroke="${color}" stroke-width="${width}" opacity="${op}"${dash?` stroke-dasharray="${dash}"`:''}/>`;
+    if(dots) o+=pts.filter((_,i)=>i%2===0).map(p=>`<circle cx="${PXu(p).toFixed(1)}" cy="${PYu(p).toFixed(1)}" r="2" fill="${color}" opacity="${op}"/>`).join("");
     return o;
   };
-  let rings=""; for(let i=1;i<=3;i++){const yy=(botY-availH*i/3).toFixed(1);rings+=`<line x1="20" y1="${yy}" x2="${W-20}" y2="${yy}" stroke="#ffffff08"/>`;}
-  const cline=`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${botY}" stroke="#ffffff10"/>`;
-  let body=rings+cline;
-  if(baseMean) body+=line(baseMean,"var(--ink-faint)",1.4,".6","4 3",false);   // stock reference
-  body+=sprays.map(sp=>line(sp,"var(--brass)",1.5,".82",null,false)).join("");  // recoil sprays = prominent
-  body+=line(mean,"var(--brass)",1.3,".45","4 3",false);                        // this build's average = faint dashed
-  body+=`<circle cx="${PX(0).toFixed(1)}" cy="${PY(0).toFixed(1)}" r="3.6" fill="var(--danger)"/>`; // aim point
-  const hMin=fmt(rSign(s)-s.recoilVar,3), hMax=fmt(rSign(s)+s.recoilVar,3);
-  const vMin=fmt(s.recoilUp-s.recoilVar,2), vMax=fmt(s.recoilUp+s.recoilVar,2);
-  const foot=`<text x="${cx}" y="${botY+15}" fill="var(--ink-faint)" font-size="9.5" text-anchor="middle" font-family="JetBrains Mono"><tspan fill="var(--danger)">●</tspan> aim point · solid = spray · dashed = average${changed?' · grey = stock':''}</text>`;
+  let body=rings+refSoldier(cx,chestY,scale);
+  if(mode==="example"){
+    body+=sprays.map(sp=>line(sp,"var(--brass)",1.4,".8",null,false)).join("");  // several real sprays
+    body+=line(mean,"var(--ink-faint)",1.2,".5","4 3",false);                    // average = faint dashed
+  } else {
+    if(baseMean) body+=line(baseMean,"var(--ink-faint)",1.3,".55","4 3",false);  // stock reference
+    body+=line(mean,"var(--brass)",1.9,".95",null,true);                         // average = prominent
+  }
+  body+=`<circle cx="${cx}" cy="${chestY.toFixed(1)}" r="3.4" fill="var(--danger)"/>`; // aim point
+  const last=mean[mean.length-1], mFmt=v=>v<1?v.toFixed(2):v.toFixed(1);
+  const spreadM=Math.hypot(last.x,last.y)*C, bodies=(spreadM/1.8).toFixed(1);
+  const legend=mode==="example"?"● aim · lines = sprays · dashed = average":("● aim · line = average"+(changed?" · grey = stock":""));
+  const foot=`<text x="${cx}" y="${botY+15}" fill="var(--ink-faint)" font-size="9.5" text-anchor="middle" font-family="JetBrains Mono">${legend}</text>`
+    +`<text x="${cx}" y="${botY+29}" fill="var(--ink-dim)" font-size="11" text-anchor="middle" font-family="JetBrains Mono">climb ≈ ${mFmt(spreadM)} m <tspan fill="var(--ink-faint)">(${bodies} body-heights) at 10 m</tspan></text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">${body}${foot}</svg>`
-    + `<div class="rc-note">${n} shots · per shot ↑ ${vMin}–${vMax} · ↔ ${hMin}–${hMax}</div>`;
+    + `<div class="rc-note">faint figure = 1.8 m soldier · spread ×2 at 20 m, ×5 at 50 m</div>`;
 }
 
 /* compare table */
