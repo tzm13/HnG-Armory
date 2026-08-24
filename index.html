@@ -216,11 +216,10 @@ body.veh .seg button[aria-pressed="true"]{background:var(--brass);color:#0d1116;
 .stat-group h3.sec-h .tw{font-size:9px;color:var(--brass);transition:transform .12s}
 .stat-group.sec-closed h3.sec-h .tw{transform:rotate(-90deg)}
 .stat-group.sec-closed .sec-body{display:none}
-.grid{display:flex;flex-wrap:wrap;gap:6px}
-.cell{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px;flex:1 1 118px;min-width:118px}
-.cell-n{flex:1 1 92px;min-width:92px;max-width:150px}
-.cell{max-width:260px}
-.cell-w{flex:2 1 150px;min-width:150px;max-width:320px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;align-content:start}
+.cell{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:6px 8px;min-width:0;overflow:hidden}
+.cell-n{}
+.cell-w{grid-column:span 2}
 .arm-divider{border-top:2px solid var(--brass-dim);padding-top:16px;margin-top:6px}
 .arm-divider h3{color:var(--brass);font-size:16px;letter-spacing:.12em}
 /* major section headers in the vehicle data sheet */
@@ -242,8 +241,8 @@ body.veh .seg button[aria-pressed="true"]{background:var(--brass);color:#0d1116;
 .cr{color:#c3ccd4;white-space:nowrap}
 .gd{color:#e7c15a;white-space:nowrap}
 .cr small,.gd small{color:inherit}
-.cell .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cell .v{font-family:"JetBrains Mono";font-size:16px;font-weight:500;margin-top:2px}
+.cell .k{font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint);white-space:normal;line-height:1.15;min-height:1.15em}
+.cell .v{font-family:"JetBrains Mono";font-size:16px;font-weight:500;margin-top:2px;overflow-wrap:anywhere}
 .cell .v small{font-size:10px;color:var(--ink-dim);font-weight:400}
 .cell.hot .v{color:var(--brass)}
 .cell.kill .v{color:var(--danger)}
@@ -252,7 +251,7 @@ body.veh .seg button[aria-pressed="true"]{background:var(--brass);color:#0d1116;
 
 .chartwrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 12px 5px}
 .stat-flow{column-count:2;column-gap:16px}
-.stat-flow>.stat-group{break-inside:avoid;display:inline-block;width:100%;vertical-align:top;margin-bottom:12px}
+.stat-flow>.stat-group{break-inside:avoid;display:inline-block;width:100%;vertical-align:top;margin-bottom:16px}
 @media(max-width:1050px){.stat-flow{column-count:1}}
 .chart-legend{display:flex;gap:16px;font-size:12px;color:var(--ink-dim);margin-bottom:6px;flex-wrap:wrap}
 .chart-legend .k{display:inline-flex;align-items:center;gap:6px}
@@ -606,6 +605,7 @@ function compute(w, cfg){
   const rMul = ammo.recoilModifier ?? 1;
   const recoilUp    = Math.abs(w.camerarecoilup)       * f("fCameraRecoilUp")       * rMul;
   const recoilRight = Math.abs(w.camerarecoilright)    * f("fCameraRecoilRight")    * rMul;
+  const recoilRightSigned = w.camerarecoilright        * f("fCameraRecoilRight")    * rMul; // sign = drift direction
   const recoilVar   = Math.abs(w.camerarecoilvariance) * f("fCameraRecoilVariance") * rMul;
 
   // sway is the stance-dependent part
@@ -651,7 +651,7 @@ function compute(w, cfg){
   const buyG = w.purchaseCostGold    + (isDefaultAmmo(w,ammo)?0:(ammo.purchaseCostGold||0))    + mods.reduce((s,m)=>s+(m.purchaseCostGold||0),0);
 
   return {ammo,mods,rpm,velocity,dmgNear,dmgFar,rNear,rFar,rMax,cone,
-    recoilUp,recoilRight,recoilVar,sway,swayspeed:w.swayspeed,dpsNear,dpsFar,effNear,effFar,effDpsNear,effDpsFar,htkNear,htkFar,ttkNear,ttkFar,
+    recoilUp,recoilRight,recoilRightSigned,recoilVar,sway,swayspeed:w.swayspeed,dpsNear,dpsFar,effNear,effFar,effDpsNear,effDpsFar,htkNear,htkFar,ttkNear,ttkFar,
     equiptime:w.equiptime,swayFatigue:w.swayfatigue,bloom:w.aimpenaltyperbullet,turnPenalty:w.aimpenaltyturn,coneRecovery:w.aimpenaltycontractionpersec,
     armorMin,armorMax,penMin,penMax,penFarMin,penFarMax,armorDPS,
     penNearRange:ammo.armorPenetrationNearRange,penFarRange:ammo.armorPenetrationFarRange,
@@ -881,7 +881,9 @@ function renderDetail(){
 }
 
 function cell(k,v,unit,opts={}){
-  const c=el("div","cell"+(opts.hot?" hot":"")+(opts.kill?" kill":"")+(opts.w?" cell-"+opts.w:""));
+  const vtext=String(v).replace(/<[^>]*>/g,"");          // number text without markup
+  const wide=vtext.length>8;                              // long values (e.g. 2,000→1,428) span two columns
+  const c=el("div","cell"+(opts.hot?" hot":"")+(opts.kill?" kill":"")+(wide?" cell-w":""));
   c.appendChild(el("div","k",k));
   const val=el("div","v"); val.innerHTML=v+(unit?` <small>${unit}</small>`:"");
   if(opts.delta!=null && Math.abs(opts.delta)>0.0005){
@@ -949,11 +951,11 @@ function renderGun(R,s,b){
     cell("Reload",fmt(s.reload,2),"s",{delta:s.reload-b.reload,dd:2,betterWhenUp:false,w:"n"}),
     cell("Magazine",s.mag,"rds",{w:"n"}),
     cell("Mags carried",s.mags,"",{w:"n"}),
-    cell("Effective ("+state.hitbox+(state.heavyset!=="none"?" · HS "+state.heavyset:"")+")",fmt(s.effNear,0)+" → "+fmt(s.effFar,0),"hp",{hot:true,delta:s.effNear-b.effNear,dd:0,betterWhenUp:true,w:"w"}),
-    cell("Damage / s",fmt(s.dpsNear)+" → "+fmt(s.dpsFar),"hp/s",{hot:true,w:"w"}),
-    cell("Hits to kill",s.htkNear+" → "+s.htkFar,"",{kill:true,w:"n"}),
-    cell("Time to kill",fmt(s.ttkNear)+" → "+fmt(s.ttkFar),"ms",{kill:true,w:"w"}),
-    cell("Range",fmt(s.rNear,0)+" → "+fmt(s.rFar,0),"m",{w:"w"}),
+    cell("Effective ("+state.hitbox+(state.heavyset!=="none"?" · HS "+state.heavyset:"")+")",fmt(s.effNear,0)+"→"+fmt(s.effFar,0),"hp",{hot:true,delta:s.effNear-b.effNear,dd:0,betterWhenUp:true,w:"w"}),
+    cell("Damage / s",fmt(s.dpsNear)+"→"+fmt(s.dpsFar),"hp/s",{hot:true,w:"w"}),
+    cell("Hits to kill",s.htkNear+"→"+s.htkFar,"",{kill:true,w:"n"}),
+    cell("Time to kill",fmt(s.ttkNear)+"→"+fmt(s.ttkFar),"ms",{kill:true,w:"w"}),
+    cell("Range",fmt(s.rNear,0)+"→"+fmt(s.rFar,0),"m",{w:"w"}),
     cell("Max range",fmt(s.rMax),"m",{w:"n"}),
     cell("Muzzle velocity",fmt(s.velocity),"m/s",{w:"n"}),
   ]));
@@ -968,7 +970,7 @@ function renderGun(R,s,b){
     cell("Cone of fire",fmt(s.cone,3),"°",{hot:true,delta:s.cone-b.cone,dd:3,betterWhenUp:false}),
     cell("Recoil ↑",fmt(s.recoilUp,3),"",{delta:s.recoilUp-b.recoilUp,dd:3,betterWhenUp:false}),
     cell("Recoil ↔",fmt(s.recoilRight,3),"",{delta:s.recoilRight-b.recoilRight,dd:3,betterWhenUp:false}),
-    cell("Recoil spread",fmt(s.recoilVar,3),"",{delta:s.recoilVar-b.recoilVar,dd:3,betterWhenUp:false}),
+    cell("Recoil variance",fmt(s.recoilVar,3),"",{delta:s.recoilVar-b.recoilVar,dd:3,betterWhenUp:false}),
     cell("Cone bloom / shot",fmt(s.bloom,2),"",{}),
     cell("Sway ("+state.stance+")",fmt(s.sway,2),"",{}),
     cell("Sway speed",fmt(s.swayspeed,2),"",{}),
@@ -1259,45 +1261,68 @@ function combatGraphs(s){
 }
 
 // recoil spray pattern over a mag. Shot 1 sits at the aim point (shared origin);
-// each later shot kicks up (recoilUp) and drifts (recoilRight) with a cumulative
-// variance wander, so more variance = a visibly wider, more wandering spray.
-function recoilPattern(s,n){
-  const noise=i=>((Math.sin(i*127.1+31.7)*43758.5453)%1); // deterministic, in ~[-1,1]
+// Recoil per shot = fixed (camerarecoilright, camerarecoilup) PLUS a random ±variance
+// applied to BOTH axes. Cumulated over a magazine, this gives the spray pattern.
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function recoilPattern(s,n,seed){
   const pts=[{x:0,y:0}]; let x=0,y=0;
-  for(let i=1;i<n;i++){ y+=s.recoilUp; x+= s.recoilRight + noise(i)*s.recoilVar*2.4; pts.push({x,y}); }
+  const rng = seed==null ? null : mulberry32(seed*2654435761>>>0);
+  const right = (s.recoilRightSigned!=null?s.recoilRightSigned:s.recoilRight);
+  for(let i=1;i<n;i++){
+    const vx = rng ? (rng()*2-1)*s.recoilVar : 0;   // ±variance, horizontal
+    const vy = rng ? (rng()*2-1)*s.recoilVar : 0;   // ±variance, vertical
+    x += right + vx; y += s.recoilUp + vy;
+    pts.push({x,y});
+  }
   return pts;
 }
-// stock and current are drawn as separate panels on ONE shared scale, so a bigger
-// climb or wider variance actually reads as bigger/wider instead of just rescaling.
-function recoilSVG(s,base){
-  const W=300,H=238, botY=H-30, top=26;
-  const n=Math.min(s.mag||20,25);
-  const cur=recoilPattern(s,n);
-  const changed=base && (Math.abs(s.recoilUp-base.recoilUp)>1e-4||Math.abs(s.recoilRight-base.recoilRight)>1e-4||Math.abs(s.recoilVar-base.recoilVar)>1e-4);
-  const ref=changed?recoilPattern(base,n):null;
-  const all=ref?cur.concat(ref):cur;
-  const maxX=Math.max(0.04,...all.map(p=>Math.abs(p.x))), maxY=Math.max(0.04,...all.map(p=>p.y));
-  const panelHW=changed?60:108, availH=botY-top-4;
-  const scale=Math.min(panelHW/maxX, availH/maxY); // one scale, shared by both panels
-  const panel=(pts,cx,color,label)=>{
-    const PX=x=>cx+x*scale, PY=y=>botY-y*scale;
-    let rings=""; for(let i=1;i<=3;i++)rings+=`<line x1="${cx-panelHW}" y1="${(botY-availH*i/3).toFixed(1)}" x2="${cx+panelHW}" y2="${(botY-availH*i/3).toFixed(1)}" stroke="#ffffff08"/>`;
-    const cline=`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${botY}" stroke="#ffffff12"/>`;
-    const poly=`<polyline points="${pts.map(p=>PX(p.x).toFixed(1)+','+PY(p.y).toFixed(1)).join(' ')}" fill="none" stroke="${color}" stroke-width="1.6" opacity=".85"/>`;
-    const dots=pts.map((p,i)=>`<circle cx="${PX(p.x).toFixed(1)}" cy="${PY(p.y).toFixed(1)}" r="${i===0?3.6:2.3}" fill="${i===0?'var(--danger)':color}"/>`).join("");
-    const lbl=label?`<text x="${cx}" y="${top-10}" fill="${color}" font-size="11" text-anchor="middle" font-family="Oswald" letter-spacing="1">${label}</text>`:'';
-    return rings+cline+poly+dots+lbl;
-  };
-  let body;
-  if(changed){
-    body=panel(ref,78,"var(--ink-faint)","STOCK")+panel(cur,222,"var(--brass)","THIS BUILD")
-      +`<line x1="150" y1="${top-6}" x2="150" y2="${botY+6}" stroke="#ffffff14"/>`;
-  } else {
-    body=panel(cur,150,"var(--brass)","");
+// One fixed scale across ALL weapons (calibrated to the highest-recoil weapon), so a
+// weapon/mod with more recoil literally draws a bigger pattern — and weapons stay comparable.
+const RECOIL_CAP=20; // shots drawn
+let _recoilCalib=null;
+function recoilCalib(){
+  if(_recoilCalib) return _recoilCalib;
+  let maxUp=0.5,maxX=0.3;
+  for(const wp of (typeof WEAPONS!=="undefined"?WEAPONS:[])){
+    if(!(wp.camerarecoilup||wp.camerarecoilright)||!wp.defaultAmmo) continue;
+    let s; try{ s=compute(wp,{ammoId:wp.defaultAmmo.id,modIds:[],hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"}); }catch(e){ continue; }
+    if(!(s.recoilUp||s.recoilRight)) continue;
+    const n=Math.min(wp.clipsize||RECOIL_CAP,RECOIL_CAP);
+    maxUp=Math.max(maxUp,s.recoilUp*n);
+    maxX=Math.max(maxX,(Math.abs(s.recoilRightSigned!=null?s.recoilRightSigned:s.recoilRight)+s.recoilVar)*n);
   }
-  const foot=`<text x="10" y="${botY+16}" fill="var(--ink-faint)" font-size="10" font-family="JetBrains Mono"><tspan fill="var(--danger)">●</tspan> shot 1 = aim point · spray climbs upward</text>`;
+  _recoilCalib={maxUp,maxX};
+  return _recoilCalib;
+}
+function recoilSVG(s,base){
+  const W=300,H=244, botY=H-34, top=24;
+  const n=Math.min(s.mag||20,RECOIL_CAP);
+  const rSign=v=>(v.recoilRightSigned!=null?v.recoilRightSigned:v.recoilRight);
+  const mean=recoilPattern(s,n,null);                       // average climb (fixed recoil only)
+  const sprays=[1,2,3,4].map(sd=>recoilPattern(s,n,sd));    // actual sprays incl. ±variance
+  const changed=base && (Math.abs(s.recoilUp-base.recoilUp)>1e-4||Math.abs(rSign(s)-rSign(base))>1e-4||Math.abs(s.recoilVar-base.recoilVar)>1e-4);
+  const baseMean=changed?recoilPattern(base,n,null):null;   // stock reference, same scale
+  const cx=W/2, panelHW=W/2-22, availH=botY-top-4;
+  const cal=recoilCalib();
+  const scale=Math.min(panelHW/(cal.maxX*1.08), availH/(cal.maxUp*1.08)); // FIXED across all weapons → magnitudes are comparable
+  const PX=x=>cx+x*scale, PY=y=>botY-y*scale;
+  const line=(pts,color,width,op,dash,dots)=>{
+    let o=`<polyline points="${pts.map(p=>PX(p.x).toFixed(1)+','+PY(p.y).toFixed(1)).join(' ')}" fill="none" stroke="${color}" stroke-width="${width}" opacity="${op}"${dash?` stroke-dasharray="${dash}"`:''}/>`;
+    if(dots) o+=pts.filter((_,i)=>i%2===0).map(p=>`<circle cx="${PX(p.x).toFixed(1)}" cy="${PY(p.y).toFixed(1)}" r="1.8" fill="${color}" opacity="${op}"/>`).join("");
+    return o;
+  };
+  let rings=""; for(let i=1;i<=3;i++){const yy=(botY-availH*i/3).toFixed(1);rings+=`<line x1="20" y1="${yy}" x2="${W-20}" y2="${yy}" stroke="#ffffff08"/>`;}
+  const cline=`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${botY}" stroke="#ffffff10"/>`;
+  let body=rings+cline;
+  if(baseMean) body+=line(baseMean,"var(--ink-faint)",1.4,".6","4 3",false);   // stock reference
+  body+=sprays.map(sp=>line(sp,"var(--brass)",1.5,".82",null,false)).join("");  // recoil sprays = prominent
+  body+=line(mean,"var(--brass)",1.3,".45","4 3",false);                        // this build's average = faint dashed
+  body+=`<circle cx="${PX(0).toFixed(1)}" cy="${PY(0).toFixed(1)}" r="3.6" fill="var(--danger)"/>`; // aim point
+  const hMin=fmt(rSign(s)-s.recoilVar,3), hMax=fmt(rSign(s)+s.recoilVar,3);
+  const vMin=fmt(s.recoilUp-s.recoilVar,2), vMax=fmt(s.recoilUp+s.recoilVar,2);
+  const foot=`<text x="${cx}" y="${botY+15}" fill="var(--ink-faint)" font-size="9.5" text-anchor="middle" font-family="JetBrains Mono"><tspan fill="var(--danger)">●</tspan> aim point · solid = spray · dashed = average${changed?' · grey = stock':''}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">${body}${foot}</svg>`
-    + `<div class="rc-note">${n} shots · ↑${fmt(s.recoilUp,2)} ↔${fmt(s.recoilRight,2)} ±${fmt(s.recoilVar,2)}</div>`;
+    + `<div class="rc-note">${n} shots · per shot ↑ ${vMin}–${vMax} · ↔ ${hMin}–${hMax}</div>`;
 }
 
 /* compare table */
@@ -1394,14 +1419,14 @@ const VS_GROUPS=[
   ]},
   {title:"Damage",rows:[
     {label:"Rate of fire",unit:"rpm",better:"up",get:(w,s)=>s.rpm,dd:0},
-    {label:"Effective dmg",unit:"hp",better:"up",get:(w,s)=>s.effNear,dd:0,disp:(w,s)=>fmt(s.effNear,0)+" → "+fmt(s.effFar,0)},
-    {label:"Damage / s",unit:"hp/s",better:"up",get:(w,s)=>s.dpsNear,dd:0,disp:(w,s)=>fmt(s.dpsNear)+" → "+fmt(s.dpsFar)},
-    {label:"Hits to kill",better:"down",get:(w,s)=>s.htkNear,dd:0,disp:(w,s)=>s.htkNear+" → "+s.htkFar},
-    {label:"Time to kill",unit:"ms",better:"down",get:(w,s)=>s.ttkNear,dd:0,disp:(w,s)=>fmt(s.ttkNear)+" → "+fmt(s.ttkFar)},
+    {label:"Effective dmg",unit:"hp",better:"up",get:(w,s)=>s.effNear,dd:0,disp:(w,s)=>fmt(s.effNear,0)+"→"+fmt(s.effFar,0)},
+    {label:"Damage / s",unit:"hp/s",better:"up",get:(w,s)=>s.dpsNear,dd:0,disp:(w,s)=>fmt(s.dpsNear)+"→"+fmt(s.dpsFar)},
+    {label:"Hits to kill",better:"down",get:(w,s)=>s.htkNear,dd:0,disp:(w,s)=>s.htkNear+"→"+s.htkFar},
+    {label:"Time to kill",unit:"ms",better:"down",get:(w,s)=>s.ttkNear,dd:0,disp:(w,s)=>fmt(s.ttkNear)+"→"+fmt(s.ttkFar)},
     {label:"Magazine",unit:"rds",better:"up",get:(w,s)=>s.mag,dd:0},
     {label:"Mags carried",better:"up",get:(w,s)=>s.mags,dd:0},
     {label:"Reload",unit:"s",better:"down",get:(w,s)=>s.reload,dd:2},
-    {label:"Range",unit:"m",better:"up",get:(w,s)=>s.rNear,dd:0,disp:(w,s)=>fmt(s.rNear,0)+" → "+fmt(s.rFar,0)},
+    {label:"Range",unit:"m",better:"up",get:(w,s)=>s.rNear,dd:0,disp:(w,s)=>fmt(s.rNear,0)+"→"+fmt(s.rFar,0)},
     {label:"Max range",unit:"m",better:"up",get:(w,s)=>s.rMax,dd:0},
     {label:"Muzzle velocity",unit:"m/s",better:"up",get:(w,s)=>s.velocity,dd:0},
   ]},
@@ -1415,7 +1440,7 @@ const VS_GROUPS=[
   {title:"Handling",rows:[
     {label:"Cone of fire",unit:"°",better:"down",get:(w,s)=>s.cone,dd:3},
     {label:"Recoil ↑ / ↔",better:"down",get:(w,s)=>s.recoilUp,dd:3,disp:(w,s)=>fmt(s.recoilUp,3)+" / "+fmt(s.recoilRight,3)},
-    {label:"Recoil spread",better:"down",get:(w,s)=>s.recoilVar,dd:3},
+    {label:"Recoil variance",better:"down",get:(w,s)=>s.recoilVar,dd:3},
     {label:"Cone bloom / shot",better:"down",get:(w,s)=>s.bloom,dd:2},
     {label:"Sway",better:"down",get:(w,s)=>s.sway,dd:2},
     {label:"Sway speed",better:"down",get:(w,s)=>s.swayspeed,dd:2},
@@ -1853,7 +1878,8 @@ function renderVehicleDetail(){
   const shellCost=freeFire?"free":((typeof AMMO_COST!=="undefined")?AMMO_COST[v.id+":"+a.id]:null);
 
   // --- anti-armor (shown first) ---
-  R.appendChild(group("Anti-armor",[
+  const aflow=el("div","stat-flow");
+  aflow.appendChild(group("Anti-armor",[
     cell("Armor damage",fmt(s.armorMin)+"–"+fmt(s.armorMax),"hp",{hot:true,w:"w"}),
     cell("Armor DPS",fmt(s.armorDPS,0),"hp/s",{hot:true,w:"n"}),
     cell("Armor pen · near",fmt(s.penMin,0)+"–"+fmt(s.penMax,0),"mm",{hot:true,w:"w"}),
@@ -1863,24 +1889,25 @@ function renderVehicleDetail(){
     (a.ricochetAngle!=null)?cell("Ricochet angle",fmt(a.ricochetAngle,0),"°",{w:"n"}):null,
   ].filter(Boolean)));
   // --- anti-infantry ---
-  R.appendChild(group("Anti-infantry",[
+  aflow.appendChild(group("Anti-infantry",[
     cell("Rate of fire",fmt(s.rpm),"rpm",{hot:true,w:"n"}),
     cell("Reload",fmt(s.reload,1),"s",{delta:s.reload-b.reload,dd:1,betterWhenUp:false,w:"n"}),
     cell("Magazine",s.mag,"rds",{w:"n"}),
-    cell("Damage"+(state.vheavyset!=="none"?" · HS "+state.vheavyset:""),fmt(s.effNear,0)+" → "+fmt(s.effFar,0),"hp",{hot:true,w:"w"}),
-    cell("Damage / s",fmt(s.effDpsNear,0)+" → "+fmt(s.effDpsFar,0),"hp/s",{w:"w"}),
+    cell("Damage"+(state.vheavyset!=="none"?" · HS "+state.vheavyset:""),fmt(s.effNear,0)+"→"+fmt(s.effFar,0),"hp",{hot:true,w:"w"}),
+    cell("Damage / s",fmt(s.effDpsNear,0)+"→"+fmt(s.effDpsFar,0),"hp/s",{w:"w"}),
     explDmg?cell("Explosion dmg",fmt(explDmg),"hp",{hot:true,w:"n"}):null,
     radius?cell("Blast radius",fmt(radius,1),"m",{w:"n"}):null,
     explDmg&&radius?cell("Kill range",fmt(killR,2),"m",{kill:true,w:"n"}):null,
   ].filter(Boolean)));
   // --- ballistics ---
-  R.appendChild(group("Ballistics & cost",[
+  aflow.appendChild(group("Ballistics & cost",[
     cell("Muzzle velocity",fmt(s.velocity),"m/s",{w:"n"}),
-    cell("Range",fmt(s.rNear,0)+" → "+fmt(s.rFar,0),"m",{w:"w"}),
+    cell("Range",fmt(s.rNear,0)+"→"+fmt(s.rFar,0),"m",{w:"w"}),
     cell("Max range",fmt(s.rMax),"m",{w:"n"}),
     cell("Cone of fire",fmt(s.cone,3),"°",{w:"n"}),
     (shellCost==="free")?cell("Cost per shot","Free","",{w:"n"}):((shellCost!=null)?cell("Cost per shot",cr(fmt(shellCost,2)),"",{w:"n"}):null),
   ].filter(Boolean)));
+  R.appendChild(aflow);
 
   // combat curves (side column: armor curves, plus blast falloff for HE) + accuracy
   lastStats=s; lastStatsBase=b;
