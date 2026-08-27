@@ -1133,16 +1133,9 @@ function buildAccuracy(opts={}){
 }
 
 function updateSpread(){
-  const d=state.spreadRange, deg=lastCone, r=coneRadius(deg,d), dia=2*r;
+  const d=state.spreadRange, deg=lastCone, r=coneRadius(deg,d);
   const ro=document.getElementById("spreadReadout");
-  if(ro){
-    const ref = lastTarget==="tank"
-      ? `≈ ${Math.round(dia/2.26*100)}% of a Stuart's height`
-      : `≈ ${Math.round(dia/0.5*100)}% of a torso`;
-    ro.innerHTML =
-      `<b>${deg.toFixed(3)}°</b> cone &nbsp;·&nbsp; at <b>${d} m</b> → <b>±${r.toFixed(3)} m</b> `+
-      `<span class="dim">(${(dia*100).toFixed(1)} cm across, ${ref})</span>`;
-  }
+  if(ro) ro.innerHTML=`spread at <b>${d} m</b> &nbsp;=&nbsp; <b>±${r.toFixed(2)} m</b> <span class="dim">(${deg.toFixed(2)}° cone)</span>`;
   const sb=document.getElementById("silhouetteBox"); if(sb) sb.innerHTML= lastTarget==="tank"?tankSVG(r):silhouetteSVG(r);
   const rb=document.getElementById("recoilBox"); if(rb && lastStats) rb.innerHTML=recoilSVG(lastStats,lastStatsBase,state.recoilMode||"example");
 }
@@ -1179,17 +1172,20 @@ function tankSVG(r){
 const HB_COLOR={head:"#d24b34",torso:"#c9a24b",legs:"#8a9a56",arms:"#5f6350"};
 // faint 1.8 m soldier used purely as a height reference inside the recoil panel
 function refSoldier(cx,chestY,sc){
-  const Ty=m=>chestY-m*sc, M=m=>m*sc, sw=0.5*sc, hr=0.12*sc;
-  return `<g opacity=".33" fill="var(--ink-faint)" stroke="none">`
-    +`<circle cx="${cx}" cy="${Ty(0.68).toFixed(1)}" r="${hr.toFixed(1)}"/>`
-    +`<path d="M ${(cx-sw/2).toFixed(1)} ${Ty(0.5).toFixed(1)} Q ${cx} ${Ty(0.56).toFixed(1)} ${(cx+sw/2).toFixed(1)} ${Ty(0.5).toFixed(1)} L ${(cx+sw*0.4).toFixed(1)} ${Ty(-0.05).toFixed(1)} L ${(cx-sw*0.4).toFixed(1)} ${Ty(-0.05).toFixed(1)} Z"/>`
-    +`<rect x="${(cx-sw*0.4).toFixed(1)}" y="${Ty(-0.05).toFixed(1)}" width="${(sw*0.36).toFixed(1)}" height="${M(0.94).toFixed(1)}" rx="3"/>`
-    +`<rect x="${(cx+sw*0.04).toFixed(1)}" y="${Ty(-0.05).toFixed(1)}" width="${(sw*0.36).toFixed(1)}" height="${M(0.94).toFixed(1)}" rx="3"/></g>`;
+  const personH=1.8, CF=0.42;                              // chest/aim at 0.42 from top — matches the accuracy silhouette
+  const T=f=>(chestY+(f-CF)*personH*sc), M=fr=>fr*personH*sc, sw=0.52*sc, hr=0.11*sc;
+  return `<g opacity=".3" fill="var(--ink-faint)" stroke="none">`
+    +`<ellipse cx="${cx}" cy="${T(0.13).toFixed(1)}" rx="${hr.toFixed(1)}" ry="${(hr*1.15).toFixed(1)}"/>`
+    +`<rect x="${(cx-sw*0.62).toFixed(1)}" y="${T(0.30).toFixed(1)}" width="${(sw*0.16).toFixed(1)}" height="${M(0.34).toFixed(1)}" rx="4"/>`
+    +`<rect x="${(cx+sw*0.46).toFixed(1)}" y="${T(0.30).toFixed(1)}" width="${(sw*0.16).toFixed(1)}" height="${M(0.34).toFixed(1)}" rx="4"/>`
+    +`<path d="M ${(cx-sw/2).toFixed(1)} ${T(0.30).toFixed(1)} Q ${cx} ${T(0.26).toFixed(1)} ${(cx+sw/2).toFixed(1)} ${T(0.30).toFixed(1)} L ${(cx+sw*0.4).toFixed(1)} ${T(0.62).toFixed(1)} L ${(cx-sw*0.4).toFixed(1)} ${T(0.62).toFixed(1)} Z"/>`
+    +`<rect x="${(cx-sw*0.4).toFixed(1)}" y="${T(0.62).toFixed(1)}" width="${(sw*0.36).toFixed(1)}" height="${M(0.38).toFixed(1)}" rx="4"/>`
+    +`<rect x="${(cx+sw*0.04).toFixed(1)}" y="${T(0.62).toFixed(1)}" width="${(sw*0.36).toFixed(1)}" height="${M(0.38).toFixed(1)}" rx="4"/></g>`;
 }
 function silhouetteSVG(r){
   const VB=210, personH=1.8;
   const sceneM=Math.max(personH*1.15, 2*r*1.25, 0.6), k=VB/sceneM;
-  const cx=VB/2, topY=(VB-personH*k)/2, chestY=topY+0.55*personH*k;
+  const cx=VB/2, topY=(VB-personH*k)/2, chestY=topY+0.42*personH*k;
   const sel=state.hitbox, out=p=>p===sel?'stroke="#f4efdc" stroke-width="2"':'stroke="#00000030" stroke-width="1"';
   const M=(m)=>m*personH*k, T=(m)=>topY+m*personH*k; // helpers: metres of body → px
   const shoulderW=0.52*k, headR=0.11*k;
@@ -1266,15 +1262,27 @@ function metricChart(s,opts){
 
 // the 2x2 combat curves (damage / dps / htk / ttk over distance, after hitbox+HS)
 function combatGraphs(s){
+  const w=curWeapon(), AT_RIFLES=[34,135,138]; // PTRD 1941, Panzerbüchse-39, PTRS 1941
   const hb=state.hitbox==="head"?s.headMult:HITBOX.find(h=>h.id===state.hitbox).mult, hs=state.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.heavyset).mult, mul=hb*hs;
   const dmg=d=>dmgAtRange(s,d)*mul;
   const htk=d=>Math.max(1,Math.ceil(TARGET_HP/(dmgAtRange(s,d)*mul)));
   const ttk=d=>(htk(d)-1)*(60/s.rpm)*1000;
   const grid=el("div","mini-grid");
-  grid.appendChild(metricChart(s,{title:"Damage",color:"var(--danger)",yAt:dmg,kill100:true}));
-  grid.appendChild(metricChart(s,{title:"Damage / s",color:"#e07a2f",yAt:d=>dmg(d)*s.rpm/60}));
-  grid.appendChild(metricChart(s,{title:"Hits to kill",color:"var(--good)",yAt:htk,stepped:true}));
-  grid.appendChild(metricChart(s,{title:"Time to kill (ms)",color:"var(--brass)",yAt:ttk,stepped:true}));
+  if(w && AT_RIFLES.includes(w.id)){
+    // anti-tank rifle: keep infantry damage, swap infantry DPS for armour curves
+    const armorAvg=(s.armorMin+s.armorMax)/2, aMaxD=s.penFarRange||300;
+    const penAvg=d=>{const near=(s.penMin+s.penMax)/2, far=(s.penFarMin+s.penFarMax)/2, nr=s.penNearRange||10, fr=s.penFarRange||300;
+      return d<=nr?near:d>=fr?far:near+(far-near)*(d-nr)/(fr-nr);};
+    grid.appendChild(metricChart(s,{title:"Damage",color:"var(--danger)",yAt:dmg,kill100:true}));
+    grid.appendChild(metricChart(s,{title:"Armor damage",color:"#c85a3f",yAt:()=>armorAvg,maxD:aMaxD}));
+    grid.appendChild(metricChart(s,{title:"Armor DPS",color:"#e07a2f",yAt:()=>s.armorDPS,maxD:aMaxD}));
+    grid.appendChild(metricChart(s,{title:"Armor penetration (mm)",color:"#7f95a3",yAt:penAvg,maxD:aMaxD}));
+  } else {
+    grid.appendChild(metricChart(s,{title:"Damage",color:"var(--danger)",yAt:dmg,kill100:true}));
+    grid.appendChild(metricChart(s,{title:"Damage / s",color:"#e07a2f",yAt:d=>dmg(d)*s.rpm/60}));
+    grid.appendChild(metricChart(s,{title:"Hits to kill",color:"var(--good)",yAt:htk,stepped:true}));
+    grid.appendChild(metricChart(s,{title:"Time to kill (ms)",color:"var(--brass)",yAt:ttk,stepped:true}));
+  }
   const wrap=el("div","chartwrap");
   wrap.appendChild(el("div","chart-legend",`<span class="k" style="color:var(--ink-faint)">vs distance · after ${state.hitbox}${state.heavyset!=="none"?" · HS "+state.heavyset:""} · dashed = 100 hp</span>`));
   wrap.appendChild(grid); return wrap;
@@ -1302,28 +1310,37 @@ function recoilPattern(s,n,seed){
 const REC_M_PER_UNIT_10M=0.10776, REC_REF_DIST=10;
 function recoilSVG(s,base,mode){
   mode=mode||"example";
-  const W=290,H=252, top=14, botY=H-42, leftPad=30;
+  const W=290,H=250, top=30, botY=H-30, leftPad=34;
+  const w=curWeapon();
   const n=Math.min(s.mag||20,30), C=REC_M_PER_UNIT_10M;
+  const d=state.spreadRange, Cd=C*d/10;                     // recoil-units → metres at the SELECTED distance
   const rSign=v=>(v.recoilRightSigned!=null?v.recoilRightSigned:v.recoilRight);
-  const mean=recoilPattern(s,n,null);                       // average climb
-  const sprays=[1,2,3,4].map(sd=>recoilPattern(s,n,sd));    // real sprays incl. ±variance
+  const mean=recoilPattern(s,n,null);
+  const sprays=[1,2,3,4].map(sd=>recoilPattern(s,n,sd));
   const changed=base && (Math.abs(s.recoilUp-base.recoilUp)>1e-4||Math.abs(rSign(s)-rSign(base))>1e-4||Math.abs(s.recoilVar-base.recoilVar)>1e-4);
-  const baseMean=changed?recoilPattern(base,n,null):null;   // stock reference
+  const baseMean=changed?recoilPattern(base,n,null):null;
   const allRec=[...mean,...sprays.flat(),...(baseMean||[])];
-  const topM=Math.max(0.1,...allRec.map(p=>p.y*C)), maxXM=Math.max(0.04,...allRec.map(p=>Math.abs(p.x)*C));
-  const soldFeet=-0.99, soldHead=0.81;                      // 1.8 m soldier, chest = aim = 0
-  const yHi=Math.max(topM,soldHead), yLo=soldFeet;
+  const topU=Math.max(0,...allRec.map(p=>p.y));             // cumulative climb in recoil-units (distance-independent)
+  const boltAction=w && w.weaponcategoryid===12 && w.id!==138, single=n<=1, negligibleRecoil=topU<1.5; // id 138 = PTRS 1941 (semi-auto) → keep its pattern
+  const noPattern=boltAction||single||negligibleRecoil;
+  const noPatLabel=single?"single shot — no spray":boltAction?"bolt-action — one shot at a time":"negligible recoil";
+  const topM=topU*Cd, maxXM=Math.max(0,...allRec.map(p=>Math.abs(p.x)*Cd));
+  const CF=0.42, soldHeadTop=CF*1.8, soldFeet=-(1-CF)*1.8;  // 1.8 m soldier, chest = aim = 0
+  const yHi=Math.max(noPattern?0:topM,soldHeadTop), yLo=soldFeet;
   const availH=botY-top, panelHW=(W-leftPad-10)/2, halfW=Math.max(0.28,maxXM);
-  const scale=Math.min(availH/(yHi-yLo), panelHW/halfW);    // metres → px, soldier keeps a fixed 1.8 m reference
+  const scale=Math.min(availH/(yHi-yLo), panelHW/halfW);
   const cx=leftPad+(W-leftPad-8)/2, chestY=top+yHi*scale;
-  const PXu=p=>cx+p.x*C*scale, PYu=p=>chestY-p.y*C*scale, PYm=m=>chestY-m*scale;
-  // nice round metre ticks
-  const step=niceStep(Math.max(topM,0.1),4), dec=step>=1?0:(step<0.1?2:1);
-  let rings=`<text x="${leftPad-6}" y="${(chestY+3).toFixed(1)}" fill="var(--ink-faint)" font-size="9.5" text-anchor="end" font-family="JetBrains Mono">0 m</text>`
-    +`<line x1="${leftPad}" y1="${chestY.toFixed(1)}" x2="${W-8}" y2="${chestY.toFixed(1)}" stroke="#ffffff12"/>`;
-  for(let mv=step; mv<=topM+1e-9; mv+=step){ const yy=PYm(mv); if(yy<top) break;
-    rings+=`<line x1="${leftPad}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}" stroke="#ffffff08"/>`
-      +`<text x="${leftPad-6}" y="${(yy+3).toFixed(1)}" fill="var(--ink-faint)" font-size="9.5" text-anchor="end" font-family="JetBrains Mono">${mv.toFixed(dec)}</text>`;
+  const PXu=p=>cx+p.x*Cd*scale, PYu=p=>chestY-p.y*Cd*scale, PYm=m=>chestY-m*scale;
+  // axis: title + baseline + nice rounded metre ticks at the selected distance
+  let rings=`<text x="6" y="15" fill="var(--brass-dim)" font-size="10" font-family="Oswald" letter-spacing=".05em">MUZZLE RISE · m at ${d} m</text>`
+    +`<line x1="${leftPad}" y1="${chestY.toFixed(1)}" x2="${W-8}" y2="${chestY.toFixed(1)}" stroke="#ffffff14"/>`
+    +`<text x="${leftPad-6}" y="${(chestY+3).toFixed(1)}" fill="var(--ink-faint)" font-size="10" text-anchor="end" font-family="JetBrains Mono">0</text>`;
+  if(!noPattern){
+    const step=niceStep(Math.max(topM,0.1),4), dec=step>=1?0:(step<0.1?2:1);
+    for(let mv=step; mv<=topM+1e-9; mv+=step){ const yy=PYm(mv); if(yy<top) break;
+      rings+=`<line x1="${leftPad}" y1="${yy.toFixed(1)}" x2="${W-8}" y2="${yy.toFixed(1)}" stroke="#ffffff08"/>`
+        +`<text x="${leftPad-6}" y="${(yy+3).toFixed(1)}" fill="var(--ink-faint)" font-size="10" text-anchor="end" font-family="JetBrains Mono">${mv.toFixed(dec)}</text>`;
+    }
   }
   const line=(pts,color,width,op,dash,dots)=>{
     let o=`<polyline points="${pts.map(p=>PXu(p).toFixed(1)+','+PYu(p).toFixed(1)).join(' ')}" fill="none" stroke="${color}" stroke-width="${width}" opacity="${op}"${dash?` stroke-dasharray="${dash}"`:''}/>`;
@@ -1331,21 +1348,23 @@ function recoilSVG(s,base,mode){
     return o;
   };
   let body=rings+refSoldier(cx,chestY,scale);
-  if(mode==="example"){
-    body+=sprays.map(sp=>line(sp,"var(--brass)",1.4,".8",null,false)).join("");  // several real sprays
-    body+=line(mean,"var(--ink-faint)",1.2,".5","4 3",false);                    // average = faint dashed
+  if(noPattern){
+    body+=`<circle cx="${cx}" cy="${chestY.toFixed(1)}" r="4" fill="var(--danger)"/>`
+      +`<text x="${cx}" y="${(chestY-12).toFixed(1)}" fill="var(--ink-dim)" font-size="11" text-anchor="middle" font-family="JetBrains Mono">${noPatLabel}</text>`;
   } else {
-    if(baseMean) body+=line(baseMean,"var(--ink-faint)",1.3,".55","4 3",false);  // stock reference
-    body+=line(mean,"var(--brass)",1.9,".95",null,true);                         // average = prominent
+    if(mode==="example"){
+      body+=sprays.map(sp=>line(sp,"var(--brass)",1.4,".8",null,false)).join("");
+      body+=line(mean,"var(--ink-faint)",1.2,".5","4 3",false);
+    } else {
+      if(baseMean) body+=line(baseMean,"var(--ink-faint)",1.3,".55","4 3",false);
+      body+=line(mean,"var(--brass)",1.9,".95",null,true);
+    }
+    body+=`<circle cx="${cx}" cy="${chestY.toFixed(1)}" r="3.4" fill="var(--danger)"/>`;
   }
-  body+=`<circle cx="${cx}" cy="${chestY.toFixed(1)}" r="3.4" fill="var(--danger)"/>`; // aim point
-  const last=mean[mean.length-1], mFmt=v=>v<1?v.toFixed(2):v.toFixed(1);
-  const spreadM=Math.hypot(last.x,last.y)*C, bodies=(spreadM/1.8).toFixed(1);
-  const legend=mode==="example"?"● aim · lines = sprays · dashed = average":("● aim · line = average"+(changed?" · grey = stock":""));
-  const foot=`<text x="${cx}" y="${botY+15}" fill="var(--ink-faint)" font-size="9.5" text-anchor="middle" font-family="JetBrains Mono">${legend}</text>`
-    +`<text x="${cx}" y="${botY+29}" fill="var(--ink-dim)" font-size="11" text-anchor="middle" font-family="JetBrains Mono">climb ≈ ${mFmt(spreadM)} m <tspan fill="var(--ink-faint)">(${bodies} body-heights) at 10 m</tspan></text>`;
+  const legend=noPattern?"● aim point":(mode==="example"?"● aim · lines = sprays · dashed = average":("● aim · line = average"+(changed?" · grey = stock":"")));
+  const foot=`<text x="${cx}" y="${botY+18}" fill="var(--ink-faint)" font-size="9.5" text-anchor="middle" font-family="JetBrains Mono">${legend}</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">${body}${foot}</svg>`
-    + `<div class="rc-note">faint figure = 1.8 m soldier · spread ×2 at 20 m, ×5 at 50 m</div>`;
+    + `<div class="rc-note">muzzle rise over one magazine at ${d} m · figure = 1.8 m soldier</div>`;
 }
 
 /* compare table */
