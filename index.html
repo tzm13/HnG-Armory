@@ -263,6 +263,15 @@ body.veh .seg button[aria-pressed="true"]{background:var(--brass);color:#0d1116;
 .curves-col .mini-grid{grid-template-columns:1fr}
 .curves-col .chartwrap{max-width:none;margin:0;padding:8px}
 .curves-title{font-family:"Oswald";font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);margin:0 0 6px}
+.curve-toggles{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.ct-group{display:flex;align-items:flex-start;gap:8px}
+.ct-label{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:10px;color:var(--ink-faint);min-width:52px;padding-top:4px}
+.ct-chips{display:flex;gap:5px;flex-wrap:wrap}
+.ct-chip{display:flex;align-items:center;gap:5px;padding:3px 8px;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;cursor:pointer;color:var(--ink-dim);font-size:11px;transition:color .12s,border-color .12s,background .12s}
+.ct-chip .ct-dot{width:8px;height:8px;border-radius:2px;box-shadow:0 0 0 1px #0004 inset}
+.ct-chip:hover{color:var(--ink);border-color:var(--brass-dim)}
+.ct-chip.on{color:var(--ink);border-color:var(--brass-dim);background:#2c3020}
+.curve-empty{color:var(--ink-faint);font-size:12px;padding:18px 8px;text-align:center;border:1px dashed var(--line);border-radius:6px}
 @media(max-width:1180px){.readouts-area{flex-wrap:wrap}.curves-col{flex-basis:100%;position:static}.curves-col .mini-grid{grid-template-columns:1fr 1fr}}
 .stat-cols{column-count:2;column-gap:14px}
 .stat-cols>.stat-group{break-inside:avoid;margin-bottom:12px;display:inline-block;width:100%}
@@ -1006,8 +1015,9 @@ function renderExplosive(R,w){
   const thrown=(a.speed||0)>1;
   const grenMul=(GRENADIER.find(x=>x.id===state.grenadier)||{mult:1}).mult;  // blast damage
   const ironMul=(IRONFIST.find(x=>x.id===state.ironFist)||{mult:1}).mult;     // armor damage
-  const explDmg=Math.floor((a.explosiondamage||0)*grenMul), radius=a.explosionradius||0;
-  const directHit=a.damage?Math.floor(a.damage*grenMul):0;
+  const hsMult=(HEAVYSET.find(x=>x.id===state.heavyset)||{mult:1}).mult;      // enemy Heavy Set reduces infantry blast/direct damage
+  const explDmg=Math.floor((a.explosiondamage||0)*grenMul*hsMult), radius=a.explosionradius||0;
+  const directHit=a.damage?Math.floor(a.damage*grenMul*hsMult):0;
   const killR=(explDmg>TARGET_HP&&radius>0) ? radius*(1-TARGET_HP/explDmg) : 0;
   const aMinD=Math.floor((a.armorExplosionMinDamage||a.armorMinDamage||0)*ironMul), aMaxD=Math.floor((a.armorExplosionMaxDamage||a.armorMaxDamage||0)*ironMul);
   const pMin=(a.armorExplosionMinPenetration||a.armorMinPenetration||0)*1000;
@@ -1019,9 +1029,9 @@ function renderExplosive(R,w){
   const costUse=useCost(a,"maxConditionRepairCredits")+useCost(w,"maxConditionRepairCredits");
   const costUseG=useCost(a,"maxConditionRepairGold")+useCost(w,"maxConditionRepairGold");
 
-  // side column mirrors the gun sheet: a small chart lives here (blast falloff)
+  // side column mirrors the gun sheet: toggleable blast/armor curves
   const C=$("#curvesCol");
-  if(C){ C.innerHTML=""; if(explDmg&&radius){const cw=el("div");cw.appendChild(el("div","curves-title","Blast falloff"));cw.appendChild(blastChart(explDmg,radius,killR));C.appendChild(cw);} }
+  if(C){ C.innerHTML=""; const cw=el("div"); cw.appendChild(el("div","curves-title","Blast curves")); cw.appendChild(explosiveCurves(w)); C.appendChild(cw); }
 
   const flow=el("div","stat-flow");
   flow.appendChild(group("Damage",[
@@ -1267,25 +1277,96 @@ function combatGraphs(s){
   const dmg=d=>dmgAtRange(s,d)*mul;
   const htk=d=>Math.max(1,Math.ceil(TARGET_HP/(dmgAtRange(s,d)*mul)));
   const ttk=d=>(htk(d)-1)*(60/s.rpm)*1000;
-  const grid=el("div","mini-grid");
-  if(w && AT_RIFLES.includes(w.id)){
-    // anti-tank rifle: keep infantry damage, swap infantry DPS for armour curves
-    const armorAvg=(s.armorMin+s.armorMax)/2, aMaxD=s.penFarRange||300;
-    const penAvg=d=>{const near=(s.penMin+s.penMax)/2, far=(s.penFarMin+s.penFarMax)/2, nr=s.penNearRange||10, fr=s.penFarRange||300;
-      return d<=nr?near:d>=fr?far:near+(far-near)*(d-nr)/(fr-nr);};
-    grid.appendChild(metricChart(s,{title:"Damage",color:"var(--danger)",yAt:dmg,kill100:true}));
-    grid.appendChild(metricChart(s,{title:"Armor damage",color:"#c85a3f",yAt:()=>armorAvg,maxD:aMaxD}));
-    grid.appendChild(metricChart(s,{title:"Armor DPS",color:"#e07a2f",yAt:()=>s.armorDPS,maxD:aMaxD}));
-    grid.appendChild(metricChart(s,{title:"Armor penetration (mm)",color:"#7f95a3",yAt:penAvg,maxD:aMaxD}));
-  } else {
-    grid.appendChild(metricChart(s,{title:"Damage",color:"var(--danger)",yAt:dmg,kill100:true}));
-    grid.appendChild(metricChart(s,{title:"Damage / s",color:"#e07a2f",yAt:d=>dmg(d)*s.rpm/60}));
-    grid.appendChild(metricChart(s,{title:"Hits to kill",color:"var(--good)",yAt:htk,stepped:true}));
-    grid.appendChild(metricChart(s,{title:"Time to kill (ms)",color:"var(--brass)",yAt:ttk,stepped:true}));
+  const isAT=w && AT_RIFLES.includes(w.id);
+  const hasArmor=(s.armorMax>0)||(s.penMax>0);
+  const armorAvg=(s.armorMin+s.armorMax)/2, aMaxD=s.penFarRange||300;
+  const penAvg=d=>{const near=(s.penMin+s.penMax)/2, far=(s.penFarMin+s.penFarMax)/2, nr=s.penNearRange||10, fr=s.penFarRange||300;
+    return d<=nr?near:d>=fr?far:near+(far-near)*(d-nr)/(fr-nr);};
+  // catalogue of available curves, grouped by theme
+  const CURVES=[
+    {id:"dmg", grp:"Infantry", short:"Damage",  title:"Damage",                color:"var(--danger)", yAt:dmg,                  opts:{kill100:true}},
+    {id:"dps", grp:"Infantry", short:"DPS",     title:"Damage / s",            color:"#e07a2f",       yAt:d=>dmg(d)*s.rpm/60,    opts:{}},
+    {id:"htk", grp:"Infantry", short:"Hits",    title:"Hits to kill",          color:"var(--good)",   yAt:htk,                  opts:{stepped:true}},
+    {id:"ttk", grp:"Infantry", short:"TTK",     title:"Time to kill (ms)",     color:"var(--brass)",  yAt:ttk,                  opts:{stepped:true}},
+  ];
+  if(hasArmor) CURVES.push(
+    {id:"admg",grp:"Armor",    short:"Damage",  title:"Armor damage",          color:"#c85a3f",       yAt:()=>armorAvg,          opts:{maxD:aMaxD}},
+    {id:"adps",grp:"Armor",    short:"DPS",     title:"Armor DPS",             color:"#e07a2f",       yAt:()=>s.armorDPS,        opts:{maxD:aMaxD}},
+    {id:"apen",grp:"Armor",    short:"Pen",     title:"Armor penetration (mm)",color:"#7f95a3",       yAt:penAvg,               opts:{maxD:aMaxD}},
+  );
+  // default selection, reset whenever a different weapon is opened
+  if(state.curveWid!==(w&&w.id)){
+    state.curveWid=w&&w.id;
+    state.curveOn = isAT ? {dmg:1,admg:1,adps:1,apen:1} : {dmg:1,dps:1,htk:1,ttk:1};
   }
   const wrap=el("div","chartwrap");
+  wrap.appendChild(curveToggleBar(CURVES,state.curveOn,id=>{state.curveOn[id]=!state.curveOn[id];rebuildCurves();}));
   wrap.appendChild(el("div","chart-legend",`<span class="k" style="color:var(--ink-faint)">vs distance · after ${state.hitbox}${state.heavyset!=="none"?" · HS "+state.heavyset:""} · dashed = 100 hp</span>`));
+  const grid=el("div","mini-grid");
+  const shown=CURVES.filter(c=>state.curveOn[c.id]);
+  if(shown.length) shown.forEach(c=>grid.appendChild(metricChart(s,Object.assign({title:c.title,color:c.color,yAt:c.yAt},c.opts))));
+  else grid.appendChild(el("div","curve-empty","No curves selected — pick one above."));
   wrap.appendChild(grid); return wrap;
+}
+// shared toggle bar: Infantry / Armor groups of curve chips
+function curveToggleBar(catalog,sel,onToggle){
+  const bar=el("div","curve-toggles");
+  ["Infantry","Armor"].forEach(grp=>{
+    const list=catalog.filter(c=>c.grp===grp); if(!list.length) return;
+    const g=el("div","ct-group",`<span class="ct-label">${grp}</span>`);
+    const chips=el("div","ct-chips");
+    list.forEach(c=>{
+      const on=!!sel[c.id];
+      const b=el("button","ct-chip"+(on?" on":""),`<span class="ct-dot" style="background:${on?c.color:"var(--line)"}"></span>${c.short}`);
+      b.onclick=()=>onToggle(c.id);
+      chips.appendChild(b);
+    });
+    g.appendChild(chips); bar.appendChild(g);
+  });
+  return bar;
+}
+function rebuildCurves(){
+  const C=document.getElementById("curvesCol"); if(!C||!lastStats) return;
+  C.innerHTML=""; const cw=el("div"); cw.appendChild(el("div","curves-title","Combat curves")); cw.appendChild(combatGraphs(lastStats)); C.appendChild(cw);
+}
+// blast-falloff curves for grenades / mines / AT launchers (x = metres from blast centre)
+function explosiveCurves(w){
+  const a=w.defaultAmmo||{};
+  const grenMul=(GRENADIER.find(x=>x.id===state.grenadier)||{mult:1}).mult;
+  const ironMul=(IRONFIST.find(x=>x.id===state.ironFist)||{mult:1}).mult;
+  const hsMult=(HEAVYSET.find(x=>x.id===state.heavyset)||{mult:1}).mult;
+  const reload=(w.reloadtime||0)*(FASTRELOAD.find(x=>x.id===state.fastReload)||{mult:1}).mult;
+  const explDmg=Math.floor((a.explosiondamage||0)*grenMul*hsMult), radius=a.explosionradius||0;
+  const aMinD=Math.floor((a.armorExplosionMinDamage||a.armorMinDamage||0)*ironMul), aMaxD=Math.floor((a.armorExplosionMaxDamage||a.armorMaxDamage||0)*ironMul);
+  const avgArmor=(aMinD+aMaxD)/2;
+  const avgPen=((a.armorExplosionMinPenetration||a.armorMinPenetration||0)+(a.armorExplosionMaxPenetration||a.armorMaxPenetration||0))/2*1000;
+  const maxD=radius||10, falloff=r=>radius?Math.max(0,1-r/radius):1, effDmg=r=>explDmg*falloff(r);
+  const CURVES=[];
+  if(explDmg&&radius) CURVES.push(
+    {id:"dmg", grp:"Infantry",short:"Damage",title:"Blast damage",     color:"var(--danger)",yAt:r=>effDmg(r),                                      opts:{maxD,kill100:true}},
+    {id:"dps", grp:"Infantry",short:"DPS",   title:"Blast DPS",        color:"#e07a2f",      yAt:r=>reload>0?effDmg(r)/reload:0,                       opts:{maxD}},
+    {id:"htk", grp:"Infantry",short:"Hits",  title:"Grenades to kill", color:"var(--good)",  yAt:r=>effDmg(r)>0?Math.min(99,Math.ceil(TARGET_HP/effDmg(r))):99, opts:{maxD,stepped:true}},
+    {id:"ttk", grp:"Infantry",short:"TTK",   title:"Time to kill (ms)",color:"var(--brass)", yAt:r=>{const h=effDmg(r)>0?Math.ceil(TARGET_HP/effDmg(r)):99;return (h-1)*reload*1000;}, opts:{maxD,stepped:true}},
+  );
+  if(avgArmor>0||avgPen>0) CURVES.push(
+    {id:"admg",grp:"Armor",   short:"Damage",title:"Armor damage",          color:"#c85a3f",yAt:r=>avgArmor*falloff(r), opts:{maxD}},
+    {id:"adps",grp:"Armor",   short:"DPS",   title:"Armor DPS",             color:"#e07a2f",yAt:r=>reload>0?avgArmor*falloff(r)/reload:0, opts:{maxD}},
+    {id:"apen",grp:"Armor",   short:"Pen",   title:"Armor penetration (mm)",color:"#7f95a3",yAt:()=>avgPen, opts:{maxD}},
+  );
+  if(state.curveWid!==w.id){ state.curveWid=w.id; state.curveOn={dmg:1,admg:1,apen:1}; } // explosive defaults
+  const wrap=el("div","chartwrap");
+  wrap.appendChild(curveToggleBar(CURVES,state.curveOn,id=>{state.curveOn[id]=!state.curveOn[id];rebuildExplosiveCurves();}));
+  wrap.appendChild(el("div","chart-legend",`<span class="k" style="color:var(--ink-faint)">metres from blast centre${state.heavyset!=="none"?" · HS "+state.heavyset:""} · dashed 100 hp</span>`));
+  const grid=el("div","mini-grid");
+  const shown=CURVES.filter(c=>state.curveOn[c.id]);
+  if(!CURVES.length) grid.appendChild(el("div","curve-empty","No blast/armor data for this item."));
+  else if(shown.length) shown.forEach(c=>grid.appendChild(metricChart({rFar:maxD},Object.assign({title:c.title,color:c.color,yAt:c.yAt},c.opts))));
+  else grid.appendChild(el("div","curve-empty","No curves selected — pick one above."));
+  wrap.appendChild(grid); return wrap;
+}
+function rebuildExplosiveCurves(){
+  const C=document.getElementById("curvesCol"), w=curWeapon(); if(!C||!w) return;
+  C.innerHTML=""; const cw=el("div"); cw.appendChild(el("div","curves-title","Blast curves")); cw.appendChild(explosiveCurves(w)); C.appendChild(cw);
 }
 
 // recoil spray pattern over a mag. Shot 1 sits at the aim point (shared origin);
@@ -1579,13 +1660,27 @@ function renderVersus(){
   const sers=cols.map(c=>({name:c.w.name,color:c.color,s:c.s}));
   const charts=el("div","vs-charts");
   charts.appendChild(el("div","curves-title","Combat curves"));
+  const VS_CAT=[
+    {id:"damage",grp:"Infantry",short:"Damage",title:"Damage",                color:"var(--danger)",mode:"damage"},
+    {id:"dps",   grp:"Infantry",short:"DPS",   title:"Damage / s",            color:"#e07a2f",      mode:"dps"},
+    {id:"htk",   grp:"Infantry",short:"Hits",  title:"Hits to kill",          color:"var(--good)",  mode:"htk"},
+    {id:"ttk",   grp:"Infantry",short:"TTK",   title:"Time to kill (ms)",     color:"var(--brass)", mode:"ttk"},
+    {id:"admg",  grp:"Armor",   short:"Damage",title:"Armor damage",          color:"#c85a3f",      mode:"admg"},
+    {id:"adps",  grp:"Armor",   short:"DPS",   title:"Armor DPS",             color:"#e07a2f",      mode:"adps"},
+    {id:"apen",  grp:"Armor",   short:"Pen",   title:"Armor penetration (mm)",color:"#7f95a3",      mode:"apen"},
+  ];
+  const vsHasArmor=sers.some(x=>x.s.armorMax>0||x.s.penMax>0);
+  const vsCat=VS_CAT.filter(c=>c.grp==="Infantry"||vsHasArmor);
+  if(!state.vs.curveOn) state.vs.curveOn={damage:1,ttk:1};
+  charts.appendChild(curveToggleBar(vsCat,state.vs.curveOn,id=>{state.vs.curveOn[id]=!state.vs.curveOn[id];renderVersus();}));
   const box=el("div","chartwrap");
   box.appendChild(el("div","chart-legend",
     sers.map(x=>`<span class="k"><span class="sw" style="background:${x.color}"></span>${x.name}</span>`).join("")+
     `<span class="k" style="color:var(--ink-faint)">vs distance · after ${state.vs.hitbox}${state.vs.heavyset!=="none"?" · HS "+state.vs.heavyset:""}</span>`));
   const grid=el("div","mini-grid");
-  grid.appendChild(versusChart(sers,{mode:"damage",title:"Damage"}));
-  grid.appendChild(versusChart(sers,{mode:"ttk",title:"Time to kill (ms)"}));
+  const vsShown=vsCat.filter(c=>state.vs.curveOn[c.id]);
+  if(vsShown.length) vsShown.forEach(c=>grid.appendChild(versusChart(sers,{mode:c.mode,title:c.title})));
+  else grid.appendChild(el("div","curve-empty","No curves selected — pick one above."));
   box.appendChild(grid); charts.appendChild(box);
   area.appendChild(charts);
   host.appendChild(area);
@@ -1595,44 +1690,50 @@ function versusChart(series,opts={}){
   const mode=opts.mode||"damage";
   const hbOther=HITBOX.find(h=>h.id===state.vs.hitbox).mult, hsBadge=state.vs.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.vs.heavyset).mult;
   const mulOf=s=>(state.vs.hitbox==="head"?(s.headMult||hbOther):hbOther)*hsBadge; // per-weapon head mult
-  // metric per series at distance d
+  const CFG={damage:{step:false,unit:"",kill:true},dps:{step:false,unit:""},htk:{step:true,unit:""},ttk:{step:true,unit:" ms"},admg:{step:false,unit:""},adps:{step:false,unit:""},apen:{step:false,unit:" mm"}};
+  const cfg=CFG[mode]||CFG.damage;
+  const penAvg=(s,d)=>{const near=(s.penMin+s.penMax)/2,far=(s.penFarMin+s.penFarMax)/2,nr=s.penNearRange||10,fr=s.penFarRange||300;return d<=nr?near:d>=fr?far:near+(far-near)*(d-nr)/(fr-nr);};
   const valAt=(s,d)=>{
-    const mul=mulOf(s);
-    if(mode==="damage")return dmgAtRange(s,d)*mul; // effective damage — respects hit location & Heavy Set
-    const per=dmgAtRange(s,d)*mul;
-    const htk=Math.max(1,Math.ceil(TARGET_HP/per));
-    return (htk-1)*(60/s.rpm)*1000; // ms
+    const mul=mulOf(s), per=dmgAtRange(s,d)*mul;
+    switch(mode){
+      case "damage": return per;
+      case "dps": return per*s.rpm/60;
+      case "htk": return Math.max(1,Math.ceil(TARGET_HP/per));
+      case "ttk": return (Math.max(1,Math.ceil(TARGET_HP/per))-1)*(60/s.rpm)*1000;
+      case "admg": return (s.armorMin+s.armorMax)/2;
+      case "adps": return s.armorDPS;
+      case "apen": return penAvg(s,d);
+    }
+    return 0;
   };
   const W=396,H=214,pad={l:42,r:8,t:10,b:24}, iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
-  const rawMaxD=Math.max(...series.map(x=>x.s.rFar))*1.4;
+  const isArmor=mode==="admg"||mode==="adps"||mode==="apen";
+  const rawMaxD=isArmor?(Math.max(...series.map(x=>x.s.penFarRange||300))):(Math.max(...series.map(x=>x.s.rFar))*1.4);
   const xStep=niceStep(Math.max(rawMaxD,60),6), maxD=Math.ceil(rawMaxD/xStep)*xStep;
-  // peak across all series over the plotted range
   let peak=0; series.forEach(x=>{for(let d=0;d<=maxD;d+=maxD/60)peak=Math.max(peak,valAt(x.s,d));});
   const yStep=mode==="damage"?Math.max(10,niceStep(Math.max(peak,10),5)):niceStep(Math.max(peak,1),5);
   const yMax=Math.max(yStep,Math.ceil(peak/yStep)*yStep);
   const X=d=>pad.l+(d/maxD)*iw, Y=v=>pad.t+ih-(Math.min(v,yMax)/yMax)*ih;
+  const ydec=yStep>=1?0:1;
   let grid="";
-  for(let v=0;v<=yMax+0.001;v+=yStep)grid+=`<line x1="${pad.l}" y1="${Y(v)}" x2="${W-pad.r}" y2="${Y(v)}" stroke="#ffffff10"/><text x="${pad.l-5}" y="${Y(v)+4}" fill="#8a8770" font-size="12" text-anchor="end" font-family="JetBrains Mono">${v}</text>`;
+  for(let v=0;v<=yMax+0.001;v+=yStep)grid+=`<line x1="${pad.l}" y1="${Y(v)}" x2="${W-pad.r}" y2="${Y(v)}" stroke="#ffffff10"/><text x="${pad.l-5}" y="${Y(v)+4}" fill="#8a8770" font-size="12" text-anchor="end" font-family="JetBrains Mono">${Number(v.toFixed(ydec))}</text>`;
   for(let d=0;d<=maxD+0.001;d+=xStep)grid+=`<line x1="${X(d)}" y1="${pad.t}" x2="${X(d)}" y2="${pad.t+ih}" stroke="#ffffff08"/><text x="${X(d)}" y="${H-7}" fill="#8a8770" font-size="12" text-anchor="middle" font-family="JetBrains Mono">${d}</text>`;
-  const kill=(mode==="damage"&&Y(100)>pad.t)?`<line x1="${pad.l}" y1="${Y(100)}" x2="${W-pad.r}" y2="${Y(100)}" stroke="#8a8770" stroke-dasharray="5 4"/>`:'';
-  // TTK is a step function (whole hits), damage is continuous
+  const kill=(cfg.kill&&Y(100)>pad.t)?`<line x1="${pad.l}" y1="${Y(100)}" x2="${W-pad.r}" y2="${Y(100)}" stroke="#8a8770" stroke-dasharray="5 4"/>`:'';
   const lines=series.map(x=>{
     let p=[],prev=null;
     for(let d=0;d<=maxD;d+=maxD/220){const v=valAt(x.s,d);
-      if(mode==="ttk"&&prev!==null&&v!==prev)p.push(`${X(d).toFixed(1)},${Y(prev).toFixed(1)}`);
+      if(cfg.step&&prev!==null&&v!==prev)p.push(`${X(d).toFixed(1)},${Y(prev).toFixed(1)}`);
       p.push(`${X(d).toFixed(1)},${Y(v).toFixed(1)}`); prev=v;}
     return `<polyline points="${p.join(' ')}" fill="none" stroke="${x.color}" stroke-width="2"/>`;
   }).join("");
-  const uid=mode==="damage"?"d":"t";
+  const uid=mode;
   const dots=series.map((x,i)=>`<circle id="vc${uid}${i}" r="3.5" fill="${x.color}" style="opacity:0"/>`).join("");
   const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">${grid}${kill}${lines}<line id="vcl${uid}" y1="${pad.t}" y2="${pad.t+ih}" stroke="#f4efdc" stroke-width="1" opacity="0"/>${dots}</svg>`;
-
-  // rendered as a mini-chart panel so the Compare tab matches the Data Sheet's curves column
   const wrap=el("div","mini-chart");
-  wrap.appendChild(el("div","mini-title",opts.title||(mode==="damage"?"Damage over distance":"Time to kill (ms)")));
+  wrap.appendChild(el("div","mini-title",opts.title||mode));
   const plot=el("div","dmg-plot"); plot.innerHTML=svg+`<div class="dmg-tip" id="vsTip${uid}"></div>`; wrap.appendChild(plot);
-
   const svgEl=plot.querySelector("svg"), tip=plot.querySelector("#vsTip"+uid), cl=plot.querySelector("#vcl"+uid);
+  const fmtV=v=>(cfg.step?Math.round(v):(v<10?v.toFixed(1):Math.round(v)))+cfg.unit;
   const move=ev=>{
     const rect=svgEl.getBoundingClientRect();
     const px=(ev.touches?ev.touches[0].clientX:ev.clientX)-rect.left, svgX=px/rect.width*W;
@@ -1640,7 +1741,7 @@ function versusChart(series,opts={}){
     const vx=X(d); cl.setAttribute("x1",vx); cl.setAttribute("x2",vx); cl.setAttribute("opacity",".5");
     let rows="";
     series.forEach((x,i)=>{const v=valAt(x.s,d);const dot=plot.querySelector("#vc"+uid+i);dot.setAttribute("cx",vx);dot.setAttribute("cy",Y(v));dot.style.opacity=1;
-      rows+=`<div style="color:${x.color}">${mode==="damage"?v.toFixed(1):Math.round(v)+" ms"} — ${x.name}</div>`;});
+      rows+=`<div style="color:${x.color}">${fmtV(v)} — ${x.name}</div>`;});
     tip.style.opacity=1; tip.style.left=Math.min(rect.width-150,px+12)+"px";
     tip.innerHTML=`<b>${Math.round(d)} m</b>${rows}`;
   };
