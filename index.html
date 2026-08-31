@@ -631,6 +631,10 @@ function compute(w, cfg){
   const headM = headMultOf(w);
   const hb = cfg.hitbox==="head" ? headM : HITBOX.find(h=>h.id===cfg.hitbox).mult, hsRaw = HEAVYSET.find(h=>h.id===cfg.heavyset).mult;
   const hs = cfg.hitbox==="head" ? 1 : hsRaw; // headshots bypass Heavy Set
+  // blast (explosive) stats — grenadier badge boosts blast, enemy Heavy Set reduces it
+  const explRadius = ammo.explosionradius||0;
+  const effBlast = Math.floor((ammo.explosiondamage||0)*grenMul*hsRaw);
+  const killRadius = (effBlast>TARGET_HP && explRadius>0) ? explRadius*(1-TARGET_HP/effBlast) : 0;
   const perNear = dmgNear*hb*hs, perFar = dmgFar*hb*hs;
   // effective per-hit damage & dps against the selected hit location + Heavy Set
   const effNear=perNear, effFar=perFar, effDpsNear=perNear*rpm/60, effDpsFar=perFar*rpm/60;
@@ -670,7 +674,7 @@ function compute(w, cfg){
     armorMin,armorMax,penMin,penMax,penFarMin,penFarMax,armorDPS,
     penNearRange:ammo.armorPenetrationNearRange,penFarRange:ammo.armorPenetrationFarRange,
     reload,mag:w.clipsize,mags:w.clipCount,ep:w.equipmentPointsCost,
-    costPerShot,costPerShotG,costPerMag:costPerShot*w.clipsize,costPerMagG:costPerShotG*w.clipsize,buy,buyG,headMult:headM};
+    costPerShot,costPerShotG,costPerMag:costPerShot*w.clipsize,costPerMagG:costPerShotG*w.clipsize,buy,buyG,headMult:headM,effBlast,explRadius,killRadius};
 }
 function dmgAtRange(s,d){
   if(d<=s.rNear) return s.dmgNear;
@@ -1259,7 +1263,8 @@ function metricChart(s,opts){
     if(opts.stepped&&prev!==null&&v!==prev.v)p.push(`${X(d).toFixed(1)},${Y(prev.v).toFixed(1)}`);
     p.push(`${X(d).toFixed(1)},${Y(v).toFixed(1)}`); prev={d,v};}
   const kill=opts.kill100&&Y(100)>pad.t&&Y(100)<pad.t+ih?`<line x1="${pad.l}" y1="${Y(100)}" x2="${W-pad.r}" y2="${Y(100)}" stroke="#8a8770" stroke-dasharray="4 3" opacity=".8"/>`:'';
-  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">${grid}${kill}<polyline points="${p.join(' ')}" fill="none" stroke="${opts.color}" stroke-width="2.5"/><g class="mc-cross" style="opacity:0"><line class="mcl" y1="${pad.t}" y2="${pad.t+ih}" stroke="#f4efdc" stroke-width="1" opacity=".5"/><circle class="mcd" r="3.5" fill="${opts.color}"/></g></svg>`;
+  const killMark=(opts.killMark>0&&opts.killMark<=maxD)?`<line x1="${X(opts.killMark).toFixed(1)}" y1="${pad.t}" x2="${X(opts.killMark).toFixed(1)}" y2="${pad.t+ih}" stroke="var(--good)" stroke-dasharray="3 3" opacity=".8"/><text x="${X(opts.killMark).toFixed(1)}" y="${pad.t+10}" fill="var(--good)" font-size="10" text-anchor="middle" font-family="JetBrains Mono">kill ${fmt(opts.killMark,1)}m</text>`:'';
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet">${grid}${kill}${killMark}<polyline points="${p.join(' ')}" fill="none" stroke="${opts.color}" stroke-width="2.5"/><g class="mc-cross" style="opacity:0"><line class="mcl" y1="${pad.t}" y2="${pad.t+ih}" stroke="#f4efdc" stroke-width="1" opacity=".5"/><circle class="mcd" r="3.5" fill="${opts.color}"/></g></svg>`;
   const box=el("div","mini-chart");
   box.innerHTML=`<div class="mini-title">${opts.title}</div><div class="mc-plot">${svg}<div class="mc-tip"></div></div>`;
   const svgEl=box.querySelector("svg"),tip=box.querySelector(".mc-tip"),cross=box.querySelector(".mc-cross"),cl=box.querySelector(".mcl"),cd=box.querySelector(".mcd");
@@ -1341,9 +1346,10 @@ function explosiveCurves(w){
   const avgArmor=(aMinD+aMaxD)/2;
   const avgPen=((a.armorExplosionMinPenetration||a.armorMinPenetration||0)+(a.armorExplosionMaxPenetration||a.armorMaxPenetration||0))/2*1000;
   const maxD=radius||10, falloff=r=>radius?Math.max(0,1-r/radius):1, effDmg=r=>explDmg*falloff(r);
+  const killR=(explDmg>TARGET_HP&&radius>0)?radius*(1-TARGET_HP/explDmg):0;
   const CURVES=[];
   if(explDmg&&radius) CURVES.push(
-    {id:"dmg", grp:"Infantry",short:"Damage",title:"Blast damage",     color:"var(--danger)",yAt:r=>effDmg(r),                                      opts:{maxD,kill100:true}},
+    {id:"dmg", grp:"Infantry",short:"Damage",title:"Blast damage",     color:"var(--danger)",yAt:r=>effDmg(r),                                      opts:{maxD,kill100:true,killMark:killR}},
     {id:"dps", grp:"Infantry",short:"DPS",   title:"Blast DPS",        color:"#e07a2f",      yAt:r=>reload>0?effDmg(r)/reload:0,                       opts:{maxD}},
     {id:"htk", grp:"Infantry",short:"Hits",  title:"Grenades to kill", color:"var(--good)",  yAt:r=>effDmg(r)>0?Math.min(99,Math.ceil(TARGET_HP/effDmg(r))):99, opts:{maxD,stepped:true}},
     {id:"ttk", grp:"Infantry",short:"TTK",   title:"Time to kill (ms)",color:"var(--brass)", yAt:r=>{const h=effDmg(r)>0?Math.ceil(TARGET_HP/effDmg(r)):99;return (h-1)*reload*1000;}, opts:{maxD,stepped:true}},
@@ -1662,6 +1668,7 @@ function renderVersus(){
   charts.appendChild(el("div","curves-title","Combat curves"));
   const VS_CAT=[
     {id:"damage",grp:"Infantry",short:"Damage",title:"Damage",                color:"var(--danger)",mode:"damage"},
+    {id:"blast", grp:"Infantry",short:"Blast", title:"Blast damage",           color:"var(--danger)",mode:"blast"},
     {id:"dps",   grp:"Infantry",short:"DPS",   title:"Damage / s",            color:"#e07a2f",      mode:"dps"},
     {id:"htk",   grp:"Infantry",short:"Hits",  title:"Hits to kill",          color:"var(--good)",  mode:"htk"},
     {id:"ttk",   grp:"Infantry",short:"TTK",   title:"Time to kill (ms)",     color:"var(--brass)", mode:"ttk"},
@@ -1669,8 +1676,8 @@ function renderVersus(){
     {id:"adps",  grp:"Armor",   short:"DPS",   title:"Armor DPS",             color:"#e07a2f",      mode:"adps"},
     {id:"apen",  grp:"Armor",   short:"Pen",   title:"Armor penetration (mm)",color:"#7f95a3",      mode:"apen"},
   ];
-  const vsHasArmor=sers.some(x=>x.s.armorMax>0||x.s.penMax>0);
-  const vsCat=VS_CAT.filter(c=>c.grp==="Infantry"||vsHasArmor);
+  const vsHasArmor=sers.some(x=>x.s.armorMax>0||x.s.penMax>0), vsHasBlast=sers.some(x=>x.s.explRadius>0);
+  const vsCat=VS_CAT.filter(c=>(c.id!=="blast"||vsHasBlast)&&(c.grp!=="Armor"||vsHasArmor));
   if(!state.vs.curveOn) state.vs.curveOn={damage:1,ttk:1};
   charts.appendChild(curveToggleBar(vsCat,state.vs.curveOn,id=>{state.vs.curveOn[id]=!state.vs.curveOn[id];renderVersus();}));
   const box=el("div","chartwrap");
@@ -1690,7 +1697,7 @@ function versusChart(series,opts={}){
   const mode=opts.mode||"damage";
   const hbOther=HITBOX.find(h=>h.id===state.vs.hitbox).mult, hsBadge=state.vs.hitbox==="head"?1:HEAVYSET.find(h=>h.id===state.vs.heavyset).mult;
   const mulOf=s=>(state.vs.hitbox==="head"?(s.headMult||hbOther):hbOther)*hsBadge; // per-weapon head mult
-  const CFG={damage:{step:false,unit:"",kill:true},dps:{step:false,unit:""},htk:{step:true,unit:""},ttk:{step:true,unit:" ms"},admg:{step:false,unit:""},adps:{step:false,unit:""},apen:{step:false,unit:" mm"}};
+  const CFG={damage:{step:false,unit:"",kill:true},dps:{step:false,unit:""},htk:{step:true,unit:""},ttk:{step:true,unit:" ms"},admg:{step:false,unit:""},adps:{step:false,unit:""},apen:{step:false,unit:" mm"},blast:{step:false,unit:"",kill:true}};
   const cfg=CFG[mode]||CFG.damage;
   const penAvg=(s,d)=>{const near=(s.penMin+s.penMax)/2,far=(s.penFarMin+s.penFarMax)/2,nr=s.penNearRange||10,fr=s.penFarRange||300;return d<=nr?near:d>=fr?far:near+(far-near)*(d-nr)/(fr-nr);};
   const valAt=(s,d)=>{
@@ -1703,13 +1710,14 @@ function versusChart(series,opts={}){
       case "admg": return (s.armorMin+s.armorMax)/2;
       case "adps": return s.armorDPS;
       case "apen": return penAvg(s,d);
+      case "blast": return (s.explRadius>0)?s.effBlast*Math.max(0,1-d/s.explRadius):0; // d = metres from blast centre
     }
     return 0;
   };
   const W=396,H=214,pad={l:42,r:8,t:10,b:24}, iw=W-pad.l-pad.r, ih=H-pad.t-pad.b;
-  const isArmor=mode==="admg"||mode==="adps"||mode==="apen";
-  const rawMaxD=isArmor?(Math.max(...series.map(x=>x.s.penFarRange||300))):(Math.max(...series.map(x=>x.s.rFar))*1.4);
-  const xStep=niceStep(Math.max(rawMaxD,60),6), maxD=Math.ceil(rawMaxD/xStep)*xStep;
+  const isArmor=mode==="admg"||mode==="adps"||mode==="apen", isBlast=mode==="blast";
+  const rawMaxD=isBlast?Math.max(0.5,...series.map(x=>x.s.explRadius||0)):isArmor?(Math.max(...series.map(x=>x.s.penFarRange||300))):(Math.max(...series.map(x=>x.s.rFar))*1.4);
+  const xStep=niceStep(Math.max(rawMaxD,isBlast?2:60),6), maxD=Math.ceil(rawMaxD/xStep)*xStep;
   let peak=0; series.forEach(x=>{for(let d=0;d<=maxD;d+=maxD/60)peak=Math.max(peak,valAt(x.s,d));});
   const yStep=mode==="damage"?Math.max(10,niceStep(Math.max(peak,10),5)):niceStep(Math.max(peak,1),5);
   const yMax=Math.max(yStep,Math.ceil(peak/yStep)*yStep);
