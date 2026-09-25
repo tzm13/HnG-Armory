@@ -52,7 +52,7 @@ body.veh{
   --brass:#5fa8d0; --brass-dim:#356b86; --danger:#d06a4a; --good:#5fb0a0;
 }
 .modeswitch{display:flex;border:1px solid var(--brass-dim);border-radius:var(--radius);overflow:hidden;margin-right:6px}
-.modeswitch button{background:transparent;color:var(--ink-dim);border:none;padding:6px 14px;cursor:pointer;
+.modeswitch button{background:transparent;color:var(--ink-dim);border:none;padding:6px 14px;cursor:pointer;flex:1 1 0;text-align:center;white-space:nowrap;text-indent:.1em;
   font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:12px;transition:.12s}
 .modeswitch button:hover{color:var(--ink)}
 .modeswitch button.on{background:var(--brass);color:#12140d}
@@ -147,6 +147,10 @@ body.veh #vCatChips{display:flex}
 .tw{display:inline-block;font-size:9px;transition:transform .12s;width:9px;color:var(--ink-faint)}
 .closed .tw{transform:rotate(-90deg)}
 .wpn-item{padding:6px 12px 6px 28px;font-size:14px;color:var(--ink-dim);cursor:pointer;border-left:3px solid transparent;display:flex;justify-content:space-between;gap:8px}
+.wpn-item.fac-1{background:rgba(168,176,97,.075);border-left-color:rgba(168,176,97,.5)}
+.wpn-item.fac-2{background:rgba(127,149,163,.075);border-left-color:rgba(127,149,163,.5)}
+.wpn-item.fac-3{background:rgba(192,90,69,.085);border-left-color:rgba(192,90,69,.5)}
+.wpn-item.fac-0{background:rgba(143,138,111,.05);border-left-color:rgba(143,138,111,.4)}
 .wpn-item:hover{background:var(--panel-2);color:var(--ink)}
 .wpn-item[aria-current="true"]{background:#2c3020;color:var(--ink);border-left-color:var(--brass)}
 body.veh .wpn-item[aria-current="true"]{background:#1f2c34}
@@ -327,6 +331,35 @@ body.veh .seg button:not([aria-pressed="true"]),body.veh .cfg-sel select,body.ve
 .vs-pickbox{display:flex;align-items:center;gap:8px;flex:1 1 200px}
 .vs-dot{width:12px;height:12px;border-radius:3px;flex:none;box-shadow:0 0 0 1px #0004 inset}
 .vs-pick{flex:1;background:#12140d;color:var(--ink);border:1px solid var(--line);padding:8px 9px;border-radius:var(--radius);font-size:14px}
+.vs-picker{position:relative;flex:1;min-width:0}
+.vs-pick-btn{width:100%;display:flex;justify-content:space-between;align-items:center;gap:6px;background:#12140d;color:var(--ink);border:1px solid var(--line);border-radius:var(--radius);padding:8px 10px;font-size:14px;cursor:pointer;text-align:left}
+.vs-pick-btn:hover{border-color:var(--brass-dim)}
+.vs-pick-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vs-caret{color:var(--ink-faint);font-size:10px;flex:0 0 auto}
+.vs-menu{position:fixed;z-index:200;background:var(--panel);border:1px solid var(--brass-dim);border-radius:8px;box-shadow:0 10px 28px #000a;display:none;width:max-content;max-width:94vw}
+.vs-picker.open .vs-menu{display:block}
+.vs-search{display:block;width:calc(100% - 16px);margin:8px;padding:6px 9px;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;color:var(--ink);font-size:13px;font-family:"Barlow Semi Condensed",sans-serif}
+.vs-search:focus{outline:none;border-color:var(--brass-dim)}
+.vs-casc{display:flex;border-top:1px solid var(--line)}
+.vs-col{list-style:none;margin:0;padding:4px 0;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;max-height:300px;border-right:1px solid var(--line);flex:0 0 auto;min-width:52px}
+.vs-col:last-child{border-right:none}
+.vs-col:empty{display:none}
+.vs-item{padding:5px 11px;cursor:pointer;font-size:13.5px;font-family:"Barlow Semi Condensed",sans-serif;color:var(--ink-dim);display:flex;justify-content:space-between;align-items:center;gap:12px;white-space:nowrap}
+.vs-item.fac-1{background:rgba(168,176,97,.08)}
+.vs-item.fac-2{background:rgba(127,149,163,.08)}
+.vs-item.fac-3{background:rgba(192,90,69,.09)}
+.vs-item.fac-0{background:rgba(143,138,111,.05)}
+.vs-flabel{display:inline-flex;align-items:center;gap:6px}
+.vs-fdot{width:8px;height:8px;border-radius:2px;box-shadow:0 0 0 1px #0004 inset}
+.vs-item:hover,.vs-item.hot{background:#2c3020;color:var(--ink)}
+.vs-casc .vs-item{font-size:14px}
+.vs-item.sel{color:var(--brass)}
+.vs-arr{color:var(--ink-faint);font-size:9px}
+.vs-none{color:var(--ink-faint);font-style:italic}
+.vs-fhead{position:sticky;top:0;background:var(--panel-2);padding:4px 11px;font-family:"Oswald";font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);border-bottom:1px solid var(--line)}
+.vs-results{display:none;max-height:320px;overflow-y:auto;padding:0 0 4px;border-top:1px solid var(--line);min-width:240px}
+.vs-tag{color:var(--ink-faint);font-size:10px;font-family:"Oswald";text-transform:uppercase;letter-spacing:.05em}
+.vs-empty{padding:14px;color:var(--ink-faint);font-size:13px;text-align:center}
 .vs-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px;table-layout:fixed}
 .vs-col-lbl{width:170px}
 .vs-col{width:240px}
@@ -820,10 +853,11 @@ function buildSidebar(filter=""){
   });
   if(misc.length) factionBlock("misc","Misc","#8f8a6f",null,misc);
 
-  $("#buildTag").textContent=WEAPONS.length+" items loaded";
+  const LAST_UPDATED="2026-09-25"; // ← update this date whenever the site/data changes
+  $("#buildTag").textContent="Updated "+new Date(LAST_UPDATED+"T00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
 }
 function wpnItem(w){
-  const it=el("div","wpn-item",`<span>${w.name}</span><span class="ep">${w.equipmentPointsCost} EP</span>`);
+  const it=el("div","wpn-item fac-"+w.factiontemplateid,`<span>${w.name}</span><span class="ep">${w.equipmentPointsCost} EP</span>`);
   it.setAttribute("aria-current",w.id===state.wid); it.onclick=()=>selectWeapon(w.id);
   return it;
 }
@@ -1488,23 +1522,78 @@ function renderTable(){
 const VS_PALETTE=["#c9a24b","#c85a3f","#7f95a3"];
 const stockOf=w=>compute(w,{ammoId:w.defaultAmmo.id,modIds:[],hitbox:"torso",heavyset:"none",stance:"aim"});
 
+const FAC_SHORT={1:"US",2:"GE",3:"SU",0:"Misc"};
 function weaponPicker(idx,entry,allowNone){
-  const sel=el("select","vs-pick");
-  if(allowNone){const o=el("option",null,"— none —");o.value="";if(!entry)o.selected=true;sel.appendChild(o);}
-  const groups={};
-  WEAPONS.forEach(w=>{const fk=(FACTIONS[w.factiontemplateid]||{}).name||("Faction "+w.factiontemplateid);(groups[fk] ??= []).push(w);});
-  Object.keys(groups).sort().forEach(fk=>{
-    const og=el("optgroup"); og.label=fk;
-    groups[fk].sort((a,b)=>a.name.localeCompare(b.name)).forEach(w=>{
-      const o=el("option",null,w.name);o.value=w.id;if(entry&&w.id===entry.wid)o.selected=true;og.appendChild(o);});
-    sel.appendChild(og);
+  const catOrd=lbl=>{const e=Object.values(CAT_MERGE).find(x=>x.label===lbl);return e?e.order:99;};
+  const cur=entry?WEAPONS.find(w=>w.id===entry.wid):null;
+  const pick=w=>{ state.versus[idx]=w?{wid:w.id,ammoId:w.defaultAmmo.id,modIds:[]}:null; renderVersus(); };
+  const tree={}; WEAPONS.forEach(w=>{const fid=w.factiontemplateid, ck=catName(w);((tree[fid] ??= {})[ck] ??= []).push(w);});
+  const facOrder=[1,2,3,0].filter(fid=>tree[fid]);
+
+  const wrap=el("div","vs-picker");
+  const btn=el("button","vs-pick-btn",`<span class="vs-pick-name">${cur?cur.name:"— select weapon —"}</span><span class="vs-caret">▾</span>`);
+  const menu=el("div","vs-menu");
+  const search=el("input","vs-search"); search.type="text"; search.placeholder="search weapon…"; search.setAttribute("autocomplete","off");
+  const casc=el("div","vs-casc"), results=el("div","vs-results");
+  menu.appendChild(search); menu.appendChild(casc); menu.appendChild(results);
+  wrap.appendChild(btn); wrap.appendChild(menu);
+
+  // ---- cascade (hover) ----
+  const facCol=el("ul","vs-col"), catCol=el("ul","vs-col"), wpnCol=el("ul","vs-col");
+  casc.appendChild(facCol); casc.appendChild(catCol); casc.appendChild(wpnCol);
+  const clearHot=col=>[...col.children].forEach(c=>c.classList.remove("hot"));
+  const fillWpns=(fid,ck)=>{ wpnCol.innerHTML="";
+    tree[fid][ck].slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(w=>{
+      const li=el("li","vs-item fac-"+w.factiontemplateid+(cur&&cur.id===w.id?" sel":""),w.name);
+      li.onmouseenter=()=>{clearHot(wpnCol);li.classList.add("hot");}; li.onclick=()=>pick(w); wpnCol.appendChild(li);
+    }); position(); };
+  const fillCats=fid=>{ catCol.innerHTML=""; wpnCol.innerHTML="";
+    Object.keys(tree[fid]).sort((a,b)=>catOrd(a)-catOrd(b)||a.localeCompare(b)).forEach(ck=>{
+      const li=el("li","vs-item vs-sub",`${ck}<span class="vs-arr">▸</span>`);
+      li.onmouseenter=()=>{clearHot(catCol);li.classList.add("hot");fillWpns(fid,ck);}; catCol.appendChild(li);
+    }); position(); };
+  facOrder.forEach(fid=>{
+    const li=el("li","vs-item vs-sub fac-"+fid,`<span class="vs-flabel"><span class="vs-fdot" style="background:${(FACTIONS[fid]||{}).color}"></span>${FAC_SHORT[fid]||fid}</span><span class="vs-arr">▸</span>`);
+    li.onmouseenter=()=>{clearHot(facCol);li.classList.add("hot");fillCats(fid);}; facCol.appendChild(li);
   });
-  sel.onchange=()=>{
-    if(!sel.value){state.versus[idx]=null;}
-    else{const w=WEAPONS.find(x=>x.id===+sel.value);state.versus[idx]={wid:w.id,ammoId:w.defaultAmmo.id,modIds:[]};}
-    renderVersus();
+  if(allowNone){ const none=el("li","vs-item vs-none","— none —"); none.onmouseenter=()=>{clearHot(facCol);catCol.innerHTML="";wpnCol.innerHTML="";position();}; none.onclick=()=>pick(null); facCol.appendChild(none); }
+
+  // ---- flat list (click / search): all weapons grouped by faction ----
+  const renderFlat=q=>{ results.innerHTML="";
+    if(allowNone){ const none=el("div","vs-item vs-none","— none —"); none.onclick=()=>pick(null); results.appendChild(none); }
+    const list=WEAPONS.filter(w=>!q||w.name.toLowerCase().includes(q));
+    if(!list.length){ results.appendChild(el("div","vs-empty","no matches")); return; }
+    facOrder.forEach(fid=>{
+      const fw=list.filter(w=>w.factiontemplateid===fid); if(!fw.length)return;
+      results.appendChild(el("div","vs-fhead",FAC_SHORT[fid]||fid));
+      fw.sort((a,b)=>catOrd(catName(a))-catOrd(catName(b))||a.name.localeCompare(b.name)).forEach(w=>{
+        const li=el("div","vs-item fac-"+w.factiontemplateid+(cur&&cur.id===w.id?" sel":""),`${w.name}<span class="vs-tag">${catName(w)}</span>`);
+        li.onclick=()=>pick(w); results.appendChild(li);
+      });
+    });
   };
-  return sel;
+
+  // ---- positioning (fixed, escapes the scroll container's clipping) ----
+  function position(){
+    const r=btn.getBoundingClientRect();
+    menu.style.minWidth=r.width+"px";
+    const mw=menu.offsetWidth, mh=menu.offsetHeight, pad=8;
+    let left=r.left; if(left+mw>innerWidth-pad) left=Math.max(pad,innerWidth-pad-mw);
+    let top=r.bottom+4; if(top+mh>innerHeight-pad) top=Math.max(pad,r.top-4-mh);
+    menu.style.left=left+"px"; menu.style.top=top+"px";
+  }
+  let openT=null, closeT=null, mode=null;
+  const reposition=()=>{ if(wrap.classList.contains("open")) position(); };
+  const openCasc=()=>{ mode="casc"; search.style.display="none"; casc.style.display="flex"; results.style.display="none"; wrap.classList.add("open"); position(); };
+  const openFlat=()=>{ mode="flat"; search.style.display="block"; casc.style.display="none"; results.style.display="block"; renderFlat(""); wrap.classList.add("open"); position(); search.focus(); };
+  const hide=()=>{ wrap.classList.remove("open"); mode=null; search.value=""; };
+  wrap.onmouseenter=()=>{ clearTimeout(closeT); if(mode!=="flat") openT=setTimeout(openCasc,120); };
+  wrap.onmouseleave=()=>{ clearTimeout(openT); closeT=setTimeout(hide,180); };
+  btn.onclick=e=>{ e.preventDefault(); clearTimeout(openT); openFlat(); };
+  search.onclick=e=>e.stopPropagation();
+  search.oninput=()=>{ mode="flat"; casc.style.display="none"; results.style.display="block"; renderFlat(search.value.trim().toLowerCase()); position(); };
+  addEventListener("scroll",reposition,true); addEventListener("resize",reposition);
+  return wrap;
 }
 
 // per-column ammo + attachment controls
@@ -1618,7 +1707,7 @@ function renderVersus(){
     const entry=state.versus[i], th=el("th","vs-head");
     const top=el("div","vs-picktop");
     const dot=el("span","vs-dot"); dot.style.background=VS_PALETTE[i]; top.appendChild(dot);
-    top.appendChild(weaponPicker(i,entry,i===2));
+    top.appendChild(weaponPicker(i,entry,true));
     th.appendChild(top);
     if(entry){const w=WEAPONS.find(x=>x.id===entry.wid); if(w)th.appendChild(columnConfig(i,w,entry));}
     htr.appendChild(th);
@@ -1848,7 +1937,7 @@ function buildVehicleSidebar(filter=""){
       host.appendChild(ch);
       if(!cOpen) return;
       items.sort((a,b)=>a.name.localeCompare(b.name)).forEach(v=>{
-        const it=el("div","wpn-item",`<span>${v.name}</span>`);
+        const it=el("div","wpn-item fac-"+v.factiontemplateid,`<span>${v.name}</span>`);
         it.dataset.vid=v.id; it.setAttribute("aria-current",v.id===state.vid);
         it.onclick=()=>selectVehicle(v.id); host.appendChild(it);
       });
