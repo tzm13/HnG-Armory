@@ -51,8 +51,8 @@ body.veh{
   --ink:#d3dde3; --ink-dim:#8ba0ac; --ink-faint:#5f7079;
   --brass:#5fa8d0; --brass-dim:#356b86; --danger:#d06a4a; --good:#5fb0a0;
 }
-.modeswitch{display:flex;border:1px solid var(--brass-dim);border-radius:var(--radius);overflow:hidden;margin-right:6px}
-.modeswitch button{background:transparent;color:var(--ink-dim);border:none;padding:6px 14px;cursor:pointer;flex:1 1 0;text-align:center;white-space:nowrap;text-indent:.1em;
+.modeswitch{display:flex;flex:0 0 auto;border:1px solid var(--brass-dim);border-radius:var(--radius);overflow:hidden;margin-right:6px}
+.modeswitch button{background:transparent;color:var(--ink-dim);border:none;padding:6px 10px;cursor:pointer;flex:0 0 auto;min-width:100px;text-align:center;white-space:nowrap;
   font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:12px;transition:.12s}
 .modeswitch button:hover{color:var(--ink)}
 .modeswitch button.on{background:var(--brass);color:#12140d}
@@ -853,7 +853,7 @@ function buildSidebar(filter=""){
   });
   if(misc.length) factionBlock("misc","Misc","#8f8a6f",null,misc);
 
-  const LAST_UPDATED="2026-09-25"; // ← update this date whenever the site/data changes
+  const LAST_UPDATED="2026-09-27"; // ← update this date whenever the site/data changes
   $("#buildTag").textContent="Updated "+new Date(LAST_UPDATED+"T00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
 }
 function wpnItem(w){
@@ -1696,8 +1696,9 @@ function renderVersus(){
     if(!entry)return null; const w=WEAPONS.find(x=>x.id===entry.wid); if(!w)return null;
     const s=compute(w,{ammoId:entry.ammoId,modIds:entry.modIds,hitbox:state.vs.hitbox,heavyset:state.vs.heavyset,fastReload:state.vs.fastReload,ironFist:state.vs.ironFist,grenadier:state.vs.grenadier,stance:state.vs.stance});
     s.fml=fmlSeconds(w,entry.ammoId,entry.modIds,0);
-    return {w,entry,color:VS_PALETTE[i],s};
+    return {w,entry,idx:i,color:VS_PALETTE[i],s};
   }).filter(Boolean);
+  const slots=[0,1,2].map(i=>cols.find(c=>c.idx===i)||null); // keep each weapon in its own column position
 
   // 2) picker header (its own fixed-layout table so columns line up with the panels below)
   const mkCg=()=>{const cg=el("colgroup");cg.appendChild(el("col","vs-col-lbl"));[0,1,2].forEach(()=>cg.appendChild(el("col","vs-col")));return cg;};
@@ -1737,13 +1738,13 @@ function renderVersus(){
         const tr=el("tr","vs-row"); tr.appendChild(el("td","vs-lbl",row.label));
         let best=null;
         if(!row.text){const vals=cols.map(c=>row.get(c.w,c.s));best=row.better==="up"?Math.max(...vals):Math.min(...vals);}
-        cols.forEach(c=>{
+        slots.forEach(c=>{
+          if(!c){tr.appendChild(el("td","vs-empty",""));return;}
           const v=row.get(c.w,c.s), td=el("td");
           if(row.text){td.textContent=v;td.classList.add("vs-text");}
           else{td.innerHTML=(row.disp?row.disp(c.w,c.s):fmt(v,row.dd))+(row.unit?` <small>${row.unit}</small>`:"");if(Math.abs(v-best)<1e-6)td.classList.add("vs-win");}
           tr.appendChild(td);
         });
-        for(let k=cols.length;k<3;k++)tr.appendChild(el("td","vs-empty",""));
         tb.appendChild(tr);
       });
       gt.appendChild(tb); panel.appendChild(gt);
@@ -2309,6 +2310,7 @@ function renderVehicleVersus(){
   barWrap.appendChild(bar); host.appendChild(barWrap);
 
   const cols=vehVersusCols().filter(Boolean);
+  const slots=[0,1,2].map(i=>cols.find(c=>c.i===i)||null); // keep each vehicle in its own column position
 
   const mkCg=()=>{const cg=el("colgroup");cg.appendChild(el("col","vs-col-lbl"));[0,1,2].forEach(()=>cg.appendChild(el("col","vs-col")));return cg;};
   const headTable=el("table","vs-table vs-headtable"); headTable.appendChild(mkCg());
@@ -2340,13 +2342,13 @@ function renderVehicleVersus(){
         const tr=el("tr","vs-row"); tr.appendChild(el("td","vs-lbl",row.label));
         const vals=cols.map(row.get); const finite=vals.filter(x=>isFinite(x));
         let best=null; if(finite.length)best=row.better==="up"?Math.max(...finite):Math.min(...finite);
-        cols.forEach((c,ci)=>{
-          const v=vals[ci], td=el("td");
+        slots.forEach(c=>{
+          if(!c){tr.appendChild(el("td","vs-empty",""));return;}
+          const v=row.get(c), td=el("td");
           td.innerHTML=(row.disp?row.disp(c):fmt(v,row.dd))+(row.unit?' <small>'+row.unit+'</small>':"");
           if(best!=null&&isFinite(v)&&Math.abs(v-best)<1e-6)td.classList.add("vs-win");
           tr.appendChild(td);
         });
-        for(let k=cols.length;k<3;k++)tr.appendChild(el("td","vs-empty",""));
         tb.appendChild(tr);
       });
       gt.appendChild(tb); panel.appendChild(gt);
