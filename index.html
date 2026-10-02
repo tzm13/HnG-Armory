@@ -394,13 +394,38 @@ body.veh .seg button:not([aria-pressed="true"]),body.veh .cfg-sel select,body.ve
 .vs-lbl{text-align:left !important;font-family:"Barlow Semi Condensed" !important;color:var(--ink-dim);font-size:12px;padding-right:24px !important}
 .vs-win{background:#c9a24b1a;color:var(--brass) !important}
 .vs-win small{color:var(--brass) !important;opacity:.7}
+/* compare: Data-Sheet-style readability — values centered under each weapon, light column strips */
+.vs-gtable td{font-size:14px;text-align:center}
+.vs-gtable td.vs-lbl{text-align:left}
+.vs-gtable td+td{border-left:1px solid #ffffff0d}
+.vs-headtable .vs-head+.vs-head{border-left:1px solid #ffffff0d}
+col.vs-col{width:210px}
+col.vs-col-lbl{width:200px}
+.vs-lbl{font-size:13px}
+/* compare: quick-loadout presets + copy-to-others */
+.vs-ldcell{vertical-align:top !important;padding:2px 10px 2px 2px !important}
+.vs-ldstack{display:flex;flex-direction:column;gap:6px}
+.vs-ldlbl{font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:11px;color:var(--ink-faint);margin:0 0 3px}
+.vs-ldchip{display:block;width:100%;text-align:center;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;color:var(--ink-dim);font-family:"Oswald";text-transform:uppercase;letter-spacing:.06em;font-size:11px;padding:7px 8px;transition:color .12s,background .12s,border-color .12s}
+.vs-ldchip:hover:not(:disabled){color:var(--ink);border-color:var(--brass-dim)}
+.vs-ldchip.on{background:var(--brass);color:#161810;border-color:var(--brass);font-weight:600}
+body.veh .vs-ldchip.on{color:#0d1116}
+.vs-ldchip:disabled{opacity:.4;cursor:default}
+.vs-cfgtools{display:flex;gap:6px;margin-bottom:6px}
+.vs-presetsel{flex:1 1 auto;min-width:0}
+.vs-copybtn{flex:0 0 auto;background:#12140d;border:1px solid var(--line);border-radius:var(--radius);color:var(--ink-dim);font-size:11px;padding:4px 9px;white-space:nowrap;transition:color .12s,border-color .12s}
+.vs-copybtn:hover:not(:disabled){color:var(--brass);border-color:var(--brass-dim)}
+.vs-copybtn:disabled{opacity:.4;cursor:default}
+body.veh .vs-copybtn{background:#0f161b}
+.vs-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--brass-dim);border-radius:6px;color:var(--ink);font-size:13px;font-family:"Barlow Semi Condensed",sans-serif;padding:9px 16px;box-shadow:0 8px 24px #000a;z-index:300;opacity:0;transition:opacity .2s;pointer-events:none}
+.vs-toast.show{opacity:1}
 .vs-pickers{max-width:640px}
-.vs-presetwrap{max-width:900px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:0 0 18px;overflow:hidden}
+.vs-presetwrap{max-width:none;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:0 0 18px;overflow:hidden}
 .vs-presethead{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;cursor:pointer;user-select:none;font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--brass)}
 .vs-presethead .cur{transition:transform .12s;font-size:10px}
 .vs-presetwrap.closed .cur{transform:rotate(-90deg)}
 .vs-presetwrap.closed .vs-presets{display:none}
-.vs-presets{display:flex;flex-wrap:wrap;gap:14px;padding:4px 14px 14px}
+.vs-presets{display:flex;flex-wrap:wrap;gap:12px 24px;padding:4px 16px 14px;justify-content:space-between}
 
 .vs-preset{display:flex;flex-direction:column;gap:4px}
 .vs-preset>label{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--ink-faint)}
@@ -853,7 +878,7 @@ function buildSidebar(filter=""){
   });
   if(misc.length) factionBlock("misc","Misc","#8f8a6f",null,misc);
 
-  const LAST_UPDATED="2026-09-27"; // ← update this date whenever the site/data changes
+  const LAST_UPDATED="2026-10-02"; // ← update this date whenever the site/data changes
   $("#buildTag").textContent="Updated "+new Date(LAST_UPDATED+"T00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
 }
 function wpnItem(w){
@@ -1019,7 +1044,7 @@ function renderGun(R,s,b){
     cell("Pen range",fmt(s.penNearRange)+"–"+fmt(s.penFarRange),"m",{w:"n"}),
   ]));
   flow.appendChild(group("Handling",[
-    cell("Cone of fire",fmt(s.cone,3),"°",{hot:true,delta:s.cone-b.cone,dd:3,betterWhenUp:false}),
+    cell("Cone of fire","LMAO","",{hot:true}),
     cell("Recoil ↑",fmt(s.recoilUp,3),"",{delta:s.recoilUp-b.recoilUp,dd:3,betterWhenUp:false}),
     cell("Recoil ↔",fmt(s.recoilRight,3),"",{delta:s.recoilRight-b.recoilRight,dd:3,betterWhenUp:false}),
     cell("Recoil variance",fmt(s.recoilVar,3),"",{delta:s.recoilVar-b.recoilVar,dd:3,betterWhenUp:false}),
@@ -1091,7 +1116,7 @@ function renderExplosive(R,w){
 
   flow.appendChild(group("Handling",[
     cell("Type",isMine?"Placed":(a.speed>40?"Launched":"Thrown"),""),
-    cone?cell("Cone of fire",fmt(cone,3),"°",{}):null,
+    cone?cell("Cone of fire","LMAO","",{}):null,
     cell("Equip time",fmt(w.equiptime??0,2),"s",{}),
     cell("Equipment pts",w.equipmentPointsCost,""),
   ].filter(Boolean)));
@@ -1511,7 +1536,8 @@ function renderTable(){
     const fac=FACTIONS[w.factiontemplateid]||{color:"#888"}, r=el("tr");
     TCOLS.forEach(c=>{let v=c.get(w,s);
       if(c.k==="name")v=`<span class="faction-dot" style="background:${fac.color}"></span>${v}`;
-      else v=fmt(v,(c.k==="dmgNear"||c.k==="rFar"||c.k==="cone")?(c.k==="cone"?3:1):0);
+      else if(c.k==="cone")v="LMAO";
+      else v=fmt(v,(c.k==="dmgNear"||c.k==="rFar")?1:0);
       r.appendChild(el("td",null,v));});
     r.onclick=()=>selectWeapon(w.id); tb.appendChild(r);
   });
@@ -1596,12 +1622,93 @@ function weaponPicker(idx,entry,allowNone){
   return wrap;
 }
 
+// ---- Quick loadout presets (infantry compare) ----
+// Each preset is a scalar objective scored off compute(); the solver brute-forces every
+// ammo × per-category mod combination (≤4500 for any weapon) and keeps the best, so it's
+// exact and needs no hand-coded factor math. dir:+1 maximise, -1 minimise.
+const VS_PRESETS=[
+  {id:"stock", label:"Stock"},
+  {id:"rof",   label:"Max RoF",      dir:+1, score:s=>s.rpm},
+  {id:"range", label:"Max Range",    dir:+1, score:s=>s.rFar},
+  {id:"acc",   label:"Best Accuracy",dir:-1, score:s=>s.cone},
+  {id:"recoil",label:"Min Recoil",   dir:-1, score:s=>s.recoilUp+s.recoilRight+s.recoilVar},
+];
+function vsBaseCfg(){return {hitbox:state.vs.hitbox,heavyset:state.vs.heavyset,fastReload:state.vs.fastReload,ironFist:state.vs.ironFist,grenadier:state.vs.grenadier,stance:state.vs.stance};}
+function vsPresetOf(e){ if(!e) return null; if(e.preset) return e.preset; const w=WEAPONS.find(x=>x.id===e.wid); return (w && (e.modIds||[]).length===0 && e.ammoId===w.defaultAmmo.id) ? "stock" : "custom"; }
+function vsActivePreset(){ const es=state.versus.filter(Boolean); if(!es.length) return null; const p=vsPresetOf(es[0]); return es.every(e=>vsPresetOf(e)===p)?p:null; }
+// find the ammo+mods that optimise a preset's objective for one weapon
+function presetLoadout(w,preset,baseCfg){
+  if(preset.id==="stock") return {ammoId:w.defaultAmmo.id,modIds:[]};
+  const cats={}; (w.modifiers||[]).forEach(m=>{(cats[m.weaponModCategoryId] ??= []).push(m);});
+  const optLists=Object.keys(cats).map(cid=>[null,...cats[cid]]); // null = Stock for that slot
+  const ammos=[w.defaultAmmo,...(w.ammunition||[])];
+  let best=null;
+  const consider=(modIds)=>{
+    for(const a of ammos){
+      const s=compute(w,Object.assign({},baseCfg,{ammoId:a.id,modIds}));
+      const val=preset.dir*preset.score(s);
+      // tiebreak among equal objectives: fewer mods, then default ammo, then cheaper
+      const tb=modIds.length + (a.id!==w.defaultAmmo.id?0.5:0) + (s.buy||0)*1e-7;
+      if(!best || val>best.val+1e-9 || (Math.abs(val-best.val)<1e-9 && tb<best.tb-1e-12))
+        best={val,tb,ammoId:a.id,modIds:modIds.slice()};
+    }
+  };
+  const rec=(ci,chosen)=>{ if(ci===optLists.length){consider(chosen.filter(Boolean).map(m=>m.id));return;}
+    for(const opt of optLists[ci]){chosen.push(opt);rec(ci+1,chosen);chosen.pop();} };
+  rec(0,[]);
+  return best?{ammoId:best.ammoId,modIds:best.modIds}:{ammoId:w.defaultAmmo.id,modIds:[]};
+}
+function applyPreset(preset,slotIdx){
+  const base=vsBaseCfg();
+  const targets = slotIdx==null ? [0,1,2].filter(i=>state.versus[i]) : [slotIdx];
+  targets.forEach(i=>{const e=state.versus[i]; if(!e)return; const w=WEAPONS.find(x=>x.id===e.wid); if(!w)return;
+    const r=presetLoadout(w,preset,base); e.ammoId=r.ammoId; e.modIds=r.modIds; e.preset=preset.id;});
+  renderVersus();
+}
+// copy one slot's ammo + mods onto the other filled slots, mapped by mod id → (category+name)
+function copyLoadoutToOthers(srcIdx){
+  const src=state.versus[srcIdx]; if(!src)return; const ws=WEAPONS.find(x=>x.id===src.wid); if(!ws)return;
+  const srcMods=(ws.modifiers||[]).filter(m=>(src.modIds||[]).includes(m.id));
+  const srcAmmo=[ws.defaultAmmo,...(ws.ammunition||[])].find(a=>a.id===src.ammoId)||ws.defaultAmmo;
+  let matched=0,asked=0,slots=0;
+  [0,1,2].forEach(i=>{ if(i===srcIdx)return; const e=state.versus[i]; if(!e)return; const wt=WEAPONS.find(x=>x.id===e.wid); if(!wt)return;
+    slots++; const tMods=wt.modifiers||[]; const newIds=[];
+    srcMods.forEach(sm=>{ asked++;
+      let t=tMods.find(m=>m.id===sm.id) || tMods.find(m=>m.weaponModCategoryId===sm.weaponModCategoryId && m.name===sm.name);
+      if(t){newIds.push(t.id);matched++;}
+    });
+    e.modIds=newIds;
+    const tAmmos=[wt.defaultAmmo,...(wt.ammunition||[])];
+    const ta=tAmmos.find(a=>a.id===srcAmmo.id)||tAmmos.find(a=>a.name===srcAmmo.name);
+    if(ta)e.ammoId=ta.id;
+    e.preset="custom";
+  });
+  renderVersus();
+  const unm=asked-matched;
+  vsToast("Copied "+ws.name+"'s loadout to "+slots+" slot"+(slots>1?"s":"")+(unm>0?(" — "+unm+" mod"+(unm>1?"s":"")+" had no match (left stock)"):""));
+}
+let vsToastTimer=null;
+function vsToast(msg){ let t=$("#vsToast"); if(!t){t=el("div","vs-toast");t.id="vsToast";document.body.appendChild(t);} t.textContent=msg; t.classList.add("show"); clearTimeout(vsToastTimer); vsToastTimer=setTimeout(()=>t.classList.remove("show"),2800); }
+
 // per-column ammo + attachment controls
 function columnConfig(idx,w,entry){
   const box=el("div","vs-config");
+  // preset picker + copy-to-others toolbar
+  const tools=el("div","vs-cfgtools");
+  const psel=el("select","vs-pick2 vs-presetsel");
+  VS_PRESETS.forEach(p=>{const o=el("option",null,p.label);o.value=p.id;psel.appendChild(o);});
+  const custO=el("option",null,"Custom");custO.value="custom";psel.appendChild(custO);
+  psel.value=vsPresetOf(entry);
+  psel.onchange=()=>{ if(psel.value==="custom"){psel.value=vsPresetOf(entry);return;} const p=VS_PRESETS.find(x=>x.id===psel.value); applyPreset(p,idx); };
+  tools.appendChild(psel);
+  const cp=el("button","vs-copybtn",null); cp.innerHTML="copy →"; cp.title="Copy this weapon's ammo + mods to the other slots";
+  if(state.versus.filter(Boolean).length<2) cp.disabled=true;
+  cp.onclick=()=>copyLoadoutToOthers(idx);
+  tools.appendChild(cp);
+  box.appendChild(tools);
   const asel=el("select","vs-pick2");
   [w.defaultAmmo,...(w.ammunition||[])].forEach((a,i)=>{const o=el("option",null,a.name+(i===0?" (default)":""));o.value=a.id;if(a.id===entry.ammoId)o.selected=true;asel.appendChild(o);});
-  asel.onchange=()=>{entry.ammoId=+asel.value;renderVersus();};
+  asel.onchange=()=>{entry.ammoId=+asel.value;entry.preset="custom";renderVersus();};
   box.appendChild(asel);
   const cats={}; (w.modifiers||[]).forEach(m=>{(cats[m.weaponModCategoryId] ??= []).push(m);});
   // same in-game order as the data sheet: Sight, Trigger, Bolt/Spring, Barrel (ammo is above)
@@ -1613,7 +1720,7 @@ function columnConfig(idx,w,entry){
     const sel=el("select","vs-pick2");
     const none=el("option",null,(MOD_CATEGORIES[cid]||("Mod "+cid))+": Stock");none.value="";sel.appendChild(none);
     cats[cid].forEach(m=>{const o=el("option",null,m.name);o.value=m.id;if(entry.modIds.includes(m.id))o.selected=true;sel.appendChild(o);});
-    sel.onchange=()=>{const ids=cats[cid].map(m=>m.id);entry.modIds=entry.modIds.filter(id=>!ids.includes(id));if(sel.value)entry.modIds.push(+sel.value);renderVersus();};
+    sel.onchange=()=>{const ids=cats[cid].map(m=>m.id);entry.modIds=entry.modIds.filter(id=>!ids.includes(id));if(sel.value)entry.modIds.push(+sel.value);entry.preset="custom";renderVersus();};
     box.appendChild(sel);
   });
   return box;
@@ -1644,7 +1751,7 @@ const VS_GROUPS=[
     {label:"Magazine",unit:"rds",better:"up",get:(w,s)=>s.mag,dd:0},
     {label:"Mags carried",better:"up",get:(w,s)=>s.mags,dd:0},
     {label:"Reload",unit:"s",better:"down",get:(w,s)=>s.reload,dd:2},
-    {label:"Range",unit:"m",better:"up",get:(w,s)=>s.rNear,dd:0,disp:(w,s)=>fmt(s.rNear,0)+"→"+fmt(s.rFar,0)},
+    {label:"Range Min→Max",unit:"m",better:"up",get:(w,s)=>s.rNear,dd:0,disp:(w,s)=>fmt(s.rNear,0)+"→"+fmt(s.rFar,0)},
     {label:"Max range",unit:"m",better:"up",get:(w,s)=>s.rMax,dd:0},
     {label:"Muzzle velocity",unit:"m/s",better:"up",get:(w,s)=>s.velocity,dd:0},
   ]},
@@ -1656,7 +1763,7 @@ const VS_GROUPS=[
     {label:"Pen range",unit:"m",better:"up",get:(w,s)=>s.penFarRange,dd:0,disp:(w,s)=>fmt(s.penNearRange)+"–"+fmt(s.penFarRange)},
   ]},
   {title:"Handling",rows:[
-    {label:"Cone of fire",unit:"°",better:"down",get:(w,s)=>s.cone,dd:3},
+    {label:"Cone of fire",unit:"",better:"down",get:(w,s)=>s.cone,dd:3,disp:(w,s)=>"LMAO"},
     {label:"Recoil ↑ / ↔",better:"down",get:(w,s)=>s.recoilUp,dd:3,disp:(w,s)=>fmt(s.recoilUp,3)+" / "+fmt(s.recoilRight,3)},
     {label:"Recoil variance",better:"down",get:(w,s)=>s.recoilVar,dd:3},
     {label:"Cone bloom / shot",better:"down",get:(w,s)=>s.bloom,dd:2},
@@ -1679,7 +1786,7 @@ function renderVersus(){
 
   // 1) shared scenario badges — always-visible header, collapsible body
   const barWrap=el("div","vs-presetwrap"+(state.vsBarClosed?" closed":""));
-  const barHead=el("div","vs-presethead",'<span>Scenario &amp; badges</span><span class="cur">▾</span>');
+  const barHead=el("div","vs-presethead",'<span>Setup</span><span class="cur">▾</span>');
   barHead.onclick=()=>{state.vsBarClosed=!state.vsBarClosed;renderVersus();};
   barWrap.appendChild(barHead);
   const bar=el("div","vs-presets");
@@ -1703,7 +1810,14 @@ function renderVersus(){
   // 2) picker header (its own fixed-layout table so columns line up with the panels below)
   const mkCg=()=>{const cg=el("colgroup");cg.appendChild(el("col","vs-col-lbl"));[0,1,2].forEach(()=>cg.appendChild(el("col","vs-col")));return cg;};
   const headTable=el("table","vs-table vs-headtable"); headTable.appendChild(mkCg());
-  const thead=el("thead"), htr=el("tr"); htr.appendChild(el("th","vs-lbl",""));
+  const thead=el("thead"), htr=el("tr");
+  // quick-loadout presets live in the otherwise-empty label-column header cell (left of the pickers)
+  const ldTh=el("th","vs-lbl vs-ldcell");
+  const ldStack=el("div","vs-ldstack");
+  ldStack.appendChild(el("div","vs-ldlbl","Quick loadout"));
+  const curAll=vsActivePreset(), anyFilled=state.versus.some(Boolean);
+  VS_PRESETS.forEach(p=>{const b=el("button","vs-ldchip"+(curAll===p.id?" on":""),p.label); if(!anyFilled)b.disabled=true; b.onclick=()=>applyPreset(p,null); ldStack.appendChild(b);});
+  ldTh.appendChild(ldStack); htr.appendChild(ldTh);
   [0,1,2].forEach(i=>{
     const entry=state.versus[i], th=el("th","vs-head");
     const top=el("div","vs-picktop");
@@ -2145,7 +2259,7 @@ function renderVehicleDetail(){
     cell("Muzzle velocity",fmt(s.velocity),"m/s",{w:"n"}),
     cell("Range",fmt(s.rNear,0)+"→"+fmt(s.rFar,0),"m",{w:"w"}),
     cell("Max range",fmt(s.rMax),"m",{w:"n"}),
-    cell("Cone of fire",fmt(s.cone,3),"°",{w:"n"}),
+    cell("Cone of fire","LMAO","",{w:"n"}),
     (shellCost==="free")?cell("Cost per shot","Free","",{w:"n"}):((shellCost!=null)?cell("Cost per shot",cr(fmt(shellCost,2)),"",{w:"n"}):null),
   ].filter(Boolean)));
   R.appendChild(aflow);
@@ -2228,8 +2342,8 @@ const VVS_GROUPS=[
   ]},
   {title:"Ballistics",rows:[
     {label:"Velocity",get:c=>c.s?c.s.velocity:0,unit:"m/s",better:"up"},
-    {label:"Range",get:c=>c.s?c.s.rFar:0,disp:c=>c.s?fmt(c.s.rNear,0)+" \u2192 "+fmt(c.s.rFar,0):"\u2014",unit:"m",better:"up"},
-    {label:"Cone of fire",get:c=>c.s?c.s.cone:0,dd:3,unit:"\u00b0",better:"down"},
+    {label:"Range Min\u2192Max",get:c=>c.s?c.s.rFar:0,disp:c=>c.s?fmt(c.s.rNear,0)+" \u2192 "+fmt(c.s.rFar,0):"\u2014",unit:"m",better:"up"},
+    {label:"Cone of fire",get:c=>c.s?c.s.cone:0,dd:3,unit:"",better:"down",disp:c=>c.s?"LMAO":"\u2014"},
   ]},
   {title:"Economy",rows:[
     {label:"Cost per shot",get:c=>vvsShot(c).n,disp:c=>vvsShot(c).d,better:"down"},
@@ -2299,7 +2413,7 @@ function renderVehicleVersus(){
   }
   // scenario badges
   const barWrap=el("div","vs-presetwrap"+(state.vvsBarClosed?" closed":""));
-  const barHead=el("div","vs-presethead",'<span>Scenario &amp; badges</span><span class="cur">\u25be</span>');
+  const barHead=el("div","vs-presethead",'<span>Setup</span><span class="cur">\u25be</span>');
   barHead.onclick=()=>{state.vvsBarClosed=!state.vvsBarClosed;renderVehicleVersus();};
   barWrap.appendChild(barHead);
   const bar=el("div","vs-presets");
