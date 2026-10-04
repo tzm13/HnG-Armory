@@ -419,13 +419,122 @@ body.veh .vs-ldchip.on{color:#0d1116}
 body.veh .vs-copybtn{background:#0f161b}
 .vs-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--brass-dim);border-radius:6px;color:var(--ink);font-size:13px;font-family:"Barlow Semi Condensed",sans-serif;padding:9px 16px;box-shadow:0 8px 24px #000a;z-index:300;opacity:0;transition:opacity .2s;pointer-events:none}
 .vs-toast.show{opacity:1}
+/* Loadout Maker */
+body.veh #tabLoadout{display:none}
+.ldm-title{font-family:"Oswald";font-size:22px;letter-spacing:.06em;text-transform:uppercase;color:var(--brass);margin:0 0 10px}
+.ldm-head{display:inline-flex;flex-wrap:wrap;gap:22px;margin-bottom:10px;background:var(--panel);border:1px solid var(--brass-dim);border-radius:var(--radius);padding:10px 14px;width:auto;max-width:100%}
+.ldm-ctl>label{display:block;font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--brass);margin-bottom:6px}
+.ldm-head .seg button{font-size:12px;padding:7px 13px}
+.ldm-facbtn{display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.ldm-fdot{width:9px;height:9px;border-radius:2px;box-shadow:0 0 0 1px #0004 inset;flex:0 0 auto}
+.ldm-facbtn.on .ldm-fdot{display:none}
+.ldm-facseg{max-width:200px}
+.ldm-clsseg button{white-space:nowrap}
+.ldm-meter{display:inline-flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:7px 16px;margin-bottom:12px;width:auto;max-width:100%}
+.ldm-meter-l{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--ink-dim)}
+.ldm-bar{flex:1 1 auto;height:10px;background:#12140d;border:1px solid var(--line);border-radius:6px;overflow:hidden;min-width:110px}
+body.veh .ldm-bar{background:#0f161b}
+.ldm-bar-fill{height:100%;background:var(--good);transition:width .15s}
+.ldm-meter.over .ldm-bar-fill{background:var(--danger)}
+.ldm-meter-v{font-family:"JetBrains Mono";font-size:14px;color:var(--ink);white-space:nowrap}
+.ldm-meter-v b{color:var(--brass);font-size:16px}
+.ldm-meter.over .ldm-meter-v b{color:var(--danger)}
+.ldm-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:820px){.ldm-grid{grid-template-columns:1fr}}
+.ldm-slot,.ldm-equip{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.ldm-equip{margin-bottom:48px}
+.ldm-slot-h{font-family:"Oswald";text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--brass);border-bottom:1px solid var(--line);padding-bottom:7px;margin-bottom:12px}
+.ldm-sel{width:100%;background:#12140d;color:var(--ink);border:1px solid var(--line);padding:8px 9px;border-radius:var(--radius);font-size:14px}
+body.veh .ldm-sel{background:#0f161b}
+.ldm-inrow{display:flex;align-items:center;gap:10px;margin-top:10px}
+.ldm-mini-l{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:10px;color:var(--ink-faint);min-width:42px}
+.ldm-ammoseg,.ldm-sightsel{flex:1 1 auto}
+.ldm-note{font-family:"JetBrains Mono";font-size:13px;color:var(--ink-dim);margin-top:8px}
+.ldm-note b{color:var(--brass)}
+.ldm-stats{font-family:"JetBrains Mono";font-size:12px;color:var(--ink-faint);margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
+.ldm-empty{font-size:13px;color:var(--ink-faint);margin-top:10px;line-height:1.4}
+.ldm-equiplist{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.ldm-equipitem{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:5px 7px 5px 11px}
+.ldm-eqname{font-size:13px;color:var(--ink)}
+.ldm-eqep{font-family:"JetBrains Mono";font-size:11px;color:var(--brass)}
+.ldm-eqrm{background:transparent;border:none;color:var(--ink-faint);font-size:12px;padding:0 2px;line-height:1}
+.ldm-eqrm:hover{color:var(--danger)}
+.ldm-area{display:grid;grid-template-columns:290px 1fr;gap:16px;margin-bottom:24px;align-items:start}
+@media(max-width:820px){.ldm-area{grid-template-columns:1fr}}
+.ldm-depot{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;position:sticky;top:6px;display:flex;flex-direction:column}
+.ldm-dep-search{width:100%;background:#12140d;border:1px solid var(--line);color:var(--ink);padding:7px 9px;border-radius:var(--radius);font-family:"JetBrains Mono";font-size:12px;margin:2px 0 8px}
+body.veh .ldm-dep-search{background:#0f161b}
+.ldm-dep-search::placeholder{color:var(--ink-faint)}
+.ldm-dep-chips{padding:0 0 8px;gap:5px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.ldm-dep-chips .catchip{width:32px;height:27px}
+.ldm-dep-chips .catchip svg{width:17px;height:17px}
+.ldm-dep-list{overflow-y:auto;max-height:calc(100vh - 500px);min-height:200px;padding-right:3px}
+/* reuse the sidebar's brass scrollbar in the depot list + the compare weapon picker */
+.ldm-dep-list,.vs-col,.vs-results{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.ldm-dep-list::-webkit-scrollbar,.vs-col::-webkit-scrollbar,.vs-results::-webkit-scrollbar{width:11px;height:11px}
+.ldm-dep-list::-webkit-scrollbar-track,.vs-col::-webkit-scrollbar-track,.vs-results::-webkit-scrollbar-track{background:transparent}
+.ldm-dep-list::-webkit-scrollbar-thumb,.vs-col::-webkit-scrollbar-thumb,.vs-results::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;border:3px solid var(--panel);background-clip:padding-box}
+.ldm-dep-list::-webkit-scrollbar-thumb:hover,.vs-col::-webkit-scrollbar-thumb:hover,.vs-results::-webkit-scrollbar-thumb:hover{background:var(--brass-dim);background-clip:padding-box}
+/* EP as small white circles (in-game style) + loadout badges */
+.epdots{display:inline-flex;vertical-align:middle}
+.epgrid{display:inline-flex;flex-direction:column;gap:3px}
+.eprow{display:flex;gap:3px}
+.epdot{width:8px;height:8px;border-radius:50%;background:#e8e4cf;box-shadow:0 0 0 1px #0004 inset;flex:0 0 auto}
+.epdot.empty{background:transparent;box-shadow:0 0 0 1px var(--line) inset}
+.epdot.over{background:var(--danger);box-shadow:none}
+.ldm-ep-dots .epdot{width:9px;height:9px}
+.ldm-dep-ep .epdot{width:7px;height:7px}
+.ldm-badges{margin:0 0 10px;padding-top:10px;border-top:1px solid var(--line)}
+.ldm-badges-l{display:block;font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:11px;color:var(--ink-faint);margin-bottom:6px}
+.ldm-badge-row{display:flex;flex-wrap:wrap;gap:22px}
+.ldm-badge{display:flex;flex-direction:column;gap:4px}
+.ldm-badge-n{font-family:"Oswald";text-transform:uppercase;letter-spacing:.06em;font-size:11px;color:var(--ink-dim)}
+.ldm-badge .seg{max-width:250px}
+.ldm-bonus{color:var(--good);font-size:11px}
+.ldm-dep-grp{margin-bottom:12px}
+.ldm-dep-h{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:10px;color:var(--brass);border-bottom:1px solid var(--line);padding-bottom:3px;margin-bottom:5px}
+.ldm-dep-row{display:flex;align-items:center;gap:8px;padding:4px 6px 4px 7px;border-left:3px solid transparent;border-radius:2px}
+.ldm-dep-row.fac-1{background:rgba(168,176,97,.075);border-left-color:rgba(168,176,97,.5)}
+.ldm-dep-row.fac-2{background:rgba(127,149,163,.075);border-left-color:rgba(127,149,163,.5)}
+.ldm-dep-row.fac-3{background:rgba(192,90,69,.085);border-left-color:rgba(192,90,69,.5)}
+.ldm-dep-row.fac-0{background:rgba(143,138,111,.05);border-left-color:rgba(143,138,111,.4)}
+.ldm-dep-n{flex:1 1 auto;font-size:13px;color:var(--ink-dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ldm-dep-ep{font-family:"JetBrains Mono";font-size:11px;color:var(--ink-faint);flex:0 0 auto}
+.ldm-dep-add{flex:0 0 auto;width:22px;height:22px;border:1px solid var(--line);border-radius:4px;background:#12140d;color:var(--brass);font-size:15px;line-height:1;padding:0}
+.ldm-dep-add:hover{border-color:var(--brass);background:#2a2415}
+body.veh .ldm-dep-add{background:#0f161b}
+.ldm-kit{min-width:0}
+.ldm-kit-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:12px}
+.ldm-kit-card{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:11px 12px}
+.ldm-kit-head{display:flex;align-items:center;gap:8px}
+.ldm-kit-n{flex:1 1 auto;font-family:"Oswald";text-transform:uppercase;letter-spacing:.03em;font-size:14px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ldm-kit-ep{font-family:"JetBrains Mono";font-size:12px;color:var(--brass);flex:0 0 auto}
+.ldm-kit-rm{flex:0 0 auto;background:transparent;border:none;color:var(--ink-faint);font-size:12px;padding:0 2px;line-height:1}
+.ldm-kit-rm:hover{color:var(--danger)}
+.ldm-qbtn{width:24px;height:24px;border:1px solid var(--line);border-radius:4px;background:#12140d;color:var(--ink-dim);font-size:14px;line-height:1;padding:0}
+.ldm-qbtn:hover{border-color:var(--brass-dim);color:var(--brass)}
+body.veh .ldm-qbtn{background:#0f161b}
+.ldm-qv{font-family:"JetBrains Mono";font-size:14px;color:var(--ink);min-width:20px;text-align:center}
+.ldm-qbtn:disabled,.ldm-dep-add:disabled{opacity:.3;cursor:default}
+.ldm-meters{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.ldm-meters .ldm-meter{margin-bottom:0}
+.slotsqs{display:inline-flex;gap:4px}
+.slotsq{width:13px;height:13px;border-radius:2px;background:transparent;box-shadow:0 0 0 1px var(--line) inset}
+.slotsq.on{background:var(--brass);box-shadow:none}
+body.veh .slotsq.on{background:var(--brass)}
+/* legacy / outdated marker for the cone-of-fire accuracy visuals */
+.legacy-note{background:#2a1512;border:1px solid var(--danger);border-radius:var(--radius);padding:9px 12px;font-size:12px;color:var(--ink-dim);line-height:1.45;margin-bottom:12px}
+.legacy-note b{color:var(--danger);font-family:"Oswald";letter-spacing:.06em;text-transform:uppercase}
+.legacy-note.acc-legacy{max-width:440px;margin-top:4px}
+.legacy-pane{opacity:.68;filter:grayscale(.3)}
+.legacy-tag{display:inline-block;background:var(--danger);color:#1a0f0d;font-family:"Oswald";text-transform:uppercase;letter-spacing:.07em;font-size:9px;padding:1px 5px;border-radius:2px;margin-right:6px;vertical-align:middle}
 .vs-pickers{max-width:640px}
-.vs-presetwrap{max-width:none;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:0 0 18px;overflow:hidden}
+.vs-presetwrap{max-width:1180px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin:0 0 18px;overflow:hidden}
 .vs-presethead{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;cursor:pointer;user-select:none;font-family:"Oswald";text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--brass)}
 .vs-presethead .cur{transition:transform .12s;font-size:10px}
 .vs-presetwrap.closed .cur{transform:rotate(-90deg)}
 .vs-presetwrap.closed .vs-presets{display:none}
-.vs-presets{display:flex;flex-wrap:wrap;gap:12px 24px;padding:4px 16px 14px;justify-content:space-between}
+.vs-presets{display:flex;flex-wrap:wrap;gap:12px 26px;padding:4px 16px 14px;justify-content:flex-start}
 
 .vs-preset{display:flex;flex-direction:column;gap:4px}
 .vs-preset>label{font-family:"Oswald";text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--ink-faint)}
@@ -464,6 +573,7 @@ td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{backgro
       <button role="tab" aria-selected="true" data-view="detail">Data Sheet</button>
       <button role="tab" aria-selected="false" data-view="table" id="tabTable">Weapon List</button>
       <button role="tab" aria-selected="false" data-view="versus">Compare</button>
+      <button role="tab" aria-selected="false" data-view="loadout" id="tabLoadout">Loadout</button>
     </div>
     <span class="build mono" id="buildTag"></span>
     <div class="contact" id="contactWrap">
@@ -536,12 +646,11 @@ td{font-family:"JetBrains Mono"} tbody tr{cursor:pointer} tbody tr:hover{backgro
     </section>
 
     <section class="tableview" id="tableView">
-      <div class="notice" style="margin-top:2px"><b>Compare all.</b> Every weapon at stock, torso hit, no Heavy Set.
-        Click a column to sort; click a row to open its sheet.</div>
       <div style="overflow-x:auto"><table id="cmpTable"></table></div>
     </section>
 
     <section class="tableview" id="versusView"></section>
+    <section class="tableview" id="loadoutView"></section>
   </main>
 </div>
 
@@ -1024,11 +1133,10 @@ function renderGun(R,s,b){
   // cells within each section grow to fill their row.
   const flow=el("div","stat-flow");
   flow.appendChild(group("Damage",[
+    cell("Damage",fmt(s.effNear,0)+"→"+fmt(s.effFar,0),"hp",{hot:true,delta:s.effNear-b.effNear,dd:0,betterWhenUp:true,w:"w"}),
     cell("Rate of fire",fmt(s.rpm),"rpm",{hot:true,delta:s.rpm-b.rpm,betterWhenUp:true,w:"n"}),
     cell("Reload",fmt(s.reload,2),"s",{delta:s.reload-b.reload,dd:2,betterWhenUp:false,w:"n"}),
-    cell("Magazine",s.mag,"rds",{w:"n"}),
-    cell("Mags carried",s.mags,"",{w:"n"}),
-    cell("Effective ("+state.hitbox+(state.heavyset!=="none"?" · HS "+state.heavyset:"")+")",fmt(s.effNear,0)+"→"+fmt(s.effFar,0),"hp",{hot:true,delta:s.effNear-b.effNear,dd:0,betterWhenUp:true,w:"w"}),
+    cell("Ammo",`${s.mag}/${Math.max(0,s.mags-1)*s.mag}`,"",{w:"n"}),
     cell("Damage / s",fmt(s.dpsNear)+"→"+fmt(s.dpsFar),"hp/s",{hot:true,w:"w"}),
     cell("Hits to kill",s.htkNear+"→"+s.htkFar,"",{kill:true,w:"n"}),
     cell("Time to kill",fmt(s.ttkNear)+"→"+fmt(s.ttkFar),"ms",{kill:true,w:"w"}),
@@ -1044,7 +1152,7 @@ function renderGun(R,s,b){
     cell("Pen range",fmt(s.penNearRange)+"–"+fmt(s.penFarRange),"m",{w:"n"}),
   ]));
   flow.appendChild(group("Handling",[
-    cell("Cone of fire","LMAO","",{hot:true}),
+    cell("Cone of fire",`0 <small>(${fmt(s.cone,3)}°)</small>`,"",{hot:true}),
     cell("Recoil ↑",fmt(s.recoilUp,3),"",{delta:s.recoilUp-b.recoilUp,dd:3,betterWhenUp:false}),
     cell("Recoil ↔",fmt(s.recoilRight,3),"",{delta:s.recoilRight-b.recoilRight,dd:3,betterWhenUp:false}),
     cell("Recoil variance",fmt(s.recoilVar,3),"",{delta:s.recoilVar-b.recoilVar,dd:3,betterWhenUp:false}),
@@ -1116,7 +1224,7 @@ function renderExplosive(R,w){
 
   flow.appendChild(group("Handling",[
     cell("Type",isMine?"Placed":(a.speed>40?"Launched":"Thrown"),""),
-    cone?cell("Cone of fire","LMAO","",{}):null,
+    cone?cell("Cone of fire",`0 <small>(${fmt(cone,3)}°)</small>`,"",{}):null,
     cell("Equip time",fmt(w.equiptime??0,2),"s",{}),
     cell("Equipment pts",w.equipmentPointsCost,""),
   ].filter(Boolean)));
@@ -1175,16 +1283,18 @@ function buildAccuracy(opts={}){
   if(state.silTarget==null) state.silTarget="soldier";
   lastTarget=state.silTarget; lastRecoil=opts.recoil!==false;
   const wrap=el("div","chartwrap acc-wrap");
-  const head=el("div",null,'<div id="spreadReadout" class="spread-readout"></div>'+
+  const head=el("div",null,'<div id="spreadReadout" class="spread-readout legacy-pane"></div>'+
     '<div class="spread-slider"><span>10 m</span>'+
     `<input id="spreadSlider" class="rng" type="range" min="10" max="600" step="5" value="${state.spreadRange}">`+
     '<span>600 m</span>'+
     '<div class="seg sil-seg" id="silSeg" style="margin-left:auto"></div></div>');
   const spreadCap=lastTarget==="tank"?"Spread vs an M5A1 Stuart":"Spread vs a soldier";
-  let paneHTML='<div><div class="spread-cap" id="silCap">'+spreadCap+'</div><div id="silhouetteBox"></div></div>';
+  let paneHTML='<div class="legacy-pane"><div class="spread-cap" id="silCap"><span class="legacy-tag">Legacy</span>'+spreadCap+'</div><div id="silhouetteBox"></div></div>';
   if(lastRecoil) paneHTML+='<div><div class="spread-cap rc-cap">Recoil pattern (one mag)<div class="seg rc-seg" id="recoilSeg"></div></div><div id="recoilBox"></div></div>';
   const panes=el("div","spread-panes "+(lastRecoil?"spread-panes-2":"spread-panes-1"),paneHTML);
-  wrap.appendChild(head); wrap.appendChild(panes);
+  wrap.appendChild(head);
+  wrap.appendChild(el("div","legacy-note acc-legacy","CoF was disabled in-game, so the spread figures and cone below are outdated and no longer reflect current accuracy."+(lastRecoil?" The recoil pattern is unaffected.":"")));
+  wrap.appendChild(panes);
   setTimeout(()=>{
     const sl=document.getElementById("spreadSlider"); if(sl)sl.oninput=()=>{state.spreadRange=+sl.value;updateSpread();};
     const ss=document.getElementById("silSeg");
@@ -1536,7 +1646,7 @@ function renderTable(){
     const fac=FACTIONS[w.factiontemplateid]||{color:"#888"}, r=el("tr");
     TCOLS.forEach(c=>{let v=c.get(w,s);
       if(c.k==="name")v=`<span class="faction-dot" style="background:${fac.color}"></span>${v}`;
-      else if(c.k==="cone")v="LMAO";
+      else if(c.k==="cone")v="0 <small>("+fmt(s.cone,3)+")</small>";
       else v=fmt(v,(c.k==="dmgNear"||c.k==="rFar")?1:0);
       r.appendChild(el("td",null,v));});
     r.onclick=()=>selectWeapon(w.id); tb.appendChild(r);
@@ -1743,13 +1853,12 @@ const VS_GROUPS=[
     {label:"Field maintenance",unit:"",better:"down",get:(w,s)=>s.fml,dd:0,disp:(w,s)=>fmtMMSS(s.fml)},
   ]},
   {title:"Damage",rows:[
+    {label:"Damage",unit:"hp",better:"up",get:(w,s)=>s.effNear,dd:0,disp:(w,s)=>fmt(s.effNear,0)+"→"+fmt(s.effFar,0)},
     {label:"Rate of fire",unit:"rpm",better:"up",get:(w,s)=>s.rpm,dd:0},
-    {label:"Effective dmg",unit:"hp",better:"up",get:(w,s)=>s.effNear,dd:0,disp:(w,s)=>fmt(s.effNear,0)+"→"+fmt(s.effFar,0)},
     {label:"Damage / s",unit:"hp/s",better:"up",get:(w,s)=>s.dpsNear,dd:0,disp:(w,s)=>fmt(s.dpsNear)+"→"+fmt(s.dpsFar)},
     {label:"Hits to kill",better:"down",get:(w,s)=>s.htkNear,dd:0,disp:(w,s)=>s.htkNear+"→"+s.htkFar},
     {label:"Time to kill",unit:"ms",better:"down",get:(w,s)=>s.ttkNear,dd:0,disp:(w,s)=>fmt(s.ttkNear)+"→"+fmt(s.ttkFar)},
-    {label:"Magazine",unit:"rds",better:"up",get:(w,s)=>s.mag,dd:0},
-    {label:"Mags carried",better:"up",get:(w,s)=>s.mags,dd:0},
+    {label:"Ammo",unit:"",better:"up",get:(w,s)=>s.mag+Math.max(0,s.mags-1)*s.mag,disp:(w,s)=>`${s.mag}/${Math.max(0,s.mags-1)*s.mag}`},
     {label:"Reload",unit:"s",better:"down",get:(w,s)=>s.reload,dd:2},
     {label:"Range Min→Max",unit:"m",better:"up",get:(w,s)=>s.rNear,dd:0,disp:(w,s)=>fmt(s.rNear,0)+"→"+fmt(s.rFar,0)},
     {label:"Max range",unit:"m",better:"up",get:(w,s)=>s.rMax,dd:0},
@@ -1763,7 +1872,7 @@ const VS_GROUPS=[
     {label:"Pen range",unit:"m",better:"up",get:(w,s)=>s.penFarRange,dd:0,disp:(w,s)=>fmt(s.penNearRange)+"–"+fmt(s.penFarRange)},
   ]},
   {title:"Handling",rows:[
-    {label:"Cone of fire",unit:"",better:"down",get:(w,s)=>s.cone,dd:3,disp:(w,s)=>"LMAO"},
+    {label:"Cone of fire",unit:"",better:"down",get:(w,s)=>s.cone,dd:3,disp:(w,s)=>`0 <small>(${fmt(s.cone,3)}°)</small>`},
     {label:"Recoil ↑ / ↔",better:"down",get:(w,s)=>s.recoilUp,dd:3,disp:(w,s)=>fmt(s.recoilUp,3)+" / "+fmt(s.recoilRight,3)},
     {label:"Recoil variance",better:"down",get:(w,s)=>s.recoilVar,dd:3},
     {label:"Cone bloom / shot",better:"down",get:(w,s)=>s.bloom,dd:2},
@@ -2259,7 +2368,7 @@ function renderVehicleDetail(){
     cell("Muzzle velocity",fmt(s.velocity),"m/s",{w:"n"}),
     cell("Range",fmt(s.rNear,0)+"→"+fmt(s.rFar,0),"m",{w:"w"}),
     cell("Max range",fmt(s.rMax),"m",{w:"n"}),
-    cell("Cone of fire","LMAO","",{w:"n"}),
+    cell("Cone of fire",`0 <small>(${fmt(s.cone,3)}°)</small>`,"",{w:"n"}),
     (shellCost==="free")?cell("Cost per shot","Free","",{w:"n"}):((shellCost!=null)?cell("Cost per shot",cr(fmt(shellCost,2)),"",{w:"n"}):null),
   ].filter(Boolean)));
   R.appendChild(aflow);
@@ -2343,7 +2452,7 @@ const VVS_GROUPS=[
   {title:"Ballistics",rows:[
     {label:"Velocity",get:c=>c.s?c.s.velocity:0,unit:"m/s",better:"up"},
     {label:"Range Min\u2192Max",get:c=>c.s?c.s.rFar:0,disp:c=>c.s?fmt(c.s.rNear,0)+" \u2192 "+fmt(c.s.rFar,0):"\u2014",unit:"m",better:"up"},
-    {label:"Cone of fire",get:c=>c.s?c.s.cone:0,dd:3,unit:"",better:"down",disp:c=>c.s?"LMAO":"\u2014"},
+    {label:"Cone of fire",get:c=>c.s?c.s.cone:0,dd:3,unit:"",better:"down",disp:c=>c.s?`0 <small>(${fmt(c.s.cone,3)}\u00b0)</small>`:"\u2014"},
   ]},
   {title:"Economy",rows:[
     {label:"Cost per shot",get:c=>vvsShot(c).n,disp:c=>vvsShot(c).d,better:"down"},
@@ -2536,11 +2645,216 @@ function vehVersusChart(series,opts={}){
   return box;
 }
 
+/* ============================================================================
+   Loadout Maker — faction/class builder with EP budget
+   ========================================================================== */
+// 3-way magazine option: spare rounds + EP delta
+function ammoSpareMags(w,mode){ const cc=w.clipCount||1;
+  if(mode==="none")   return 0;
+  if(mode==="double") return Math.max(0,2*cc-2);
+  return Math.max(0,cc-1); }                                       // default
+function ammoSpare(w,mode){ return ammoSpareMags(w,mode)*(w.clipsize||0); }
+function ammoNotation(w,mode,bonusMags){ const cs=w.clipsize||0; return cs+"/"+(ammoSpareMags(w,mode||"default")+(bonusMags||0))*cs; } // bonusMags = Hoarder rank
+function ammoAdjustable(w){ return !!w.canAdjustClipCount && (w.clipsize||0)>0; }
+// "none" drops 1 EP, but a weapon can never go below 1 EP — so 1 EP pocket pistols can't drop ammo
+function ammoCanNone(w){ return ammoAdjustable(w) && (w.equipmentPointsCost||0)>=2; }
+function ammoMode(w,mode){ return (mode==="none"&&!ammoCanNone(w))?"default":(mode||"default"); }
+function ammoEP(w,mode){ const base=w.equipmentPointsCost||0; if(!ammoAdjustable(w)) return base; mode=ammoMode(w,mode); return Math.max(1,base+(mode==="double"?1:mode==="none"?-1:0)); }
+
+const LDM_CLASSES=[
+  {id:"inf",  name:"Infantry",      ep:10},
+  {id:"tank", name:"Tank Crew",     ep:6},
+  {id:"para", name:"Paratrooper",   ep:8},
+  {id:"pilot",name:"Fighter Pilot", ep:6},
+  {id:"recon",name:"Recon",         ep:8},
+];
+// badges carry bonuses (None/Bronze/Silver/Gold = rank 0–3), no EP cost
+const LDM_RANKS=[{id:"none",label:"None"},{id:"bronze",label:"Bronze"},{id:"silver",label:"Silver"},{id:"gold",label:"Gold"}];
+function rankOf(id){ const i=LDM_RANKS.findIndex(r=>r.id===id); return i<0?0:i; }
+function ldmEquipBonus(w){ const L=state.ldm, c=w.weaponcategoryid;
+  if([5,6,7,9].includes(c)) return rankOf(L.badges.dynamite);          // Dynamite Lover: grenades/mines/AT grenades
+  if(c===4 && /First Aid Kit/i.test(w.name)) return rankOf(L.badges.medic); // Combat Medic: first aid kits
+  return 0; }
+// EP rendered as small white circles, in two equal rows (in-game style)
+function epDotGrid(dots){ const top=Math.ceil(dots.length/2);
+  const mk=arr=>arr.map(d=>`<span class="epdot${d?" "+d:""}"></span>`).join("");
+  return `<span class="epgrid"><span class="eprow">${mk(dots.slice(0,top))}</span><span class="eprow">${mk(dots.slice(top))}</span></span>`; }
+function epDots(n){ n=Math.max(0,n|0); return `<span class="epdots" title="${n} EP">${epDotGrid(Array(n).fill(""))}</span>`; }
+function epMeterDots(used,cap){ const dots=[], fill=Math.min(used,cap), over=Math.max(0,used-cap);
+  for(let i=0;i<fill;i++)dots.push(""); for(let i=0;i<cap-fill;i++)dots.push("empty"); for(let i=0;i<over;i++)dots.push("over");
+  return `<span class="epdots ldm-ep-dots">${epDotGrid(dots)}</span>`; }
+const STARTER_RIFLES=new Set(["Tokarev SVT-40","M1 Garand","Gewehr 43"]);      // one per faction
+const PARA_LMGS=new Set(["Fallschirmjägergewehr 42","Johnson M1941 LMG"]);     // GE / US para exception
+function isAntiMateriel(w){ return w.weaponcategoryid===12 && (w.equipmentPointsCost||0)>=7; } // PTRD/PTRS/PzB-39
+function isStarterRifle(w){ return w.weaponcategoryid===11 && STARTER_RIFLES.has(w.name); }
+function isParaLMG(w){ return w.weaponcategoryid===14 && PARA_LMGS.has(w.name); }
+function ldmClassOf(id){ return LDM_CLASSES.find(c=>c.id===id)||LDM_CLASSES[0]; }
+function isATweapon(w){ return w.weaponcategoryid===7 || w.weaponcategoryid===8 || isAntiMateriel(w); } // AT grenades, rocket launchers, anti-materiel rifles
+function ldmFacOk(w,fac){
+  if(w.factiontemplateid===0) return true;                              // shared
+  if(isATweapon(w)) return /PTRS/i.test(w.name) ? fac===3 : true;       // AT weapons are cross-faction, except PTRS (SU only)
+  return w.factiontemplateid===fac;
+}
+function ldmPrimaryAllowed(w,cls){
+  const c=w.weaponcategoryid;
+  switch(cls){
+    case "inf":   return [8,11,12,13,14,16].includes(c);          // everything incl launchers + anti-materiel
+    case "tank":  return c===16;
+    case "pilot": return c===16;
+    case "para":  return c===16 || isStarterRifle(w) || isParaLMG(w);
+    case "recon": return c===16 || isStarterRifle(w) || (c===12 && !isAntiMateriel(w));
+  }
+  return false;
+}
+function ldmPrimaries(fac,cls){ return WEAPONS.filter(w=>w.weaponslotcategoryid===1 && ldmFacOk(w,fac) && ldmPrimaryAllowed(w,cls)); }
+function ldmSecondaries(fac){ return WEAPONS.filter(w=>w.weaponslotcategoryid===2 && ldmFacOk(w,fac)); }          // handgun, all classes
+function ldmEquipment(fac,cls){ return WEAPONS.filter(w=>w.weaponslotcategoryid===4 && ldmFacOk(w,fac) && !(cls==="para" && w.name==="Adjustable Wrench")); }
+// sight mods available on a gun for a class — high-mag scopes (>1.9×) are Recon-only
+function ldmSights(w,cls){ return (w.modifiers||[]).filter(m=>m.weaponModCategoryId===4 && (cls==="recon" || m.sightMagnification==null || m.sightMagnification<=1.9)); }
+
+// free-form inventory: items can be any allowed weapon/equipment, duplicates allowed, bounded only by EP
+function ldmInit(){ if(!state.ldm || !Array.isArray(state.ldm.items)) state.ldm={fac:(state.ldm&&state.ldm.fac)||1,cls:(state.ldm&&state.ldm.cls)||"inf",items:[]};
+  if(state.ldm.q==null) state.ldm.q=""; if(!Array.isArray(state.ldm.cats)) state.ldm.cats=[];
+  if(!state.ldm.badges) state.ldm.badges={hoarder:"none",dynamite:"none",medic:"none"}; return state.ldm; }
+function ldmIsGun(w){ return w.weaponslotcategoryid===1 || w.weaponslotcategoryid===2; }
+function ldmItemEP(it){ const w=WEAPONS.find(x=>x.id===it.wid); if(!w)return 0; return ldmIsGun(w)?ammoEP(w,it.ammo):(w.equipmentPointsCost||0)*(it.qty||1); }
+function loadoutEP(){ return state.ldm.items.reduce((s,it)=>s+ldmItemEP(it),0); }
+const LDM_SLOTS=4;                                                    // in-game: 4 inventory slots (each set / weapon = 1 slot)
+function loadoutSlots(){ return state.ldm.items.reduce((s,it)=>{const w=WEAPONS.find(x=>x.id===it.wid);return s+(w&&ldmIsGun(w)?1:(it.qty||1));},0); }
+function slotSquares(n){ let s=""; for(let i=0;i<LDM_SLOTS;i++)s+=`<span class="slotsq${i<n?" on":""}"></span>`; return `<span class="slotsqs">${s}</span>`; }
+function ldmAllowedIds(){ const L=state.ldm, s=new Set();
+  ldmPrimaries(L.fac,L.cls).forEach(w=>s.add(w.id)); ldmSecondaries(L.fac).forEach(w=>s.add(w.id)); ldmEquipment(L.fac,L.cls).forEach(w=>s.add(w.id)); return s; }
+function ldmAddItem(wid){ const L=state.ldm, w=WEAPONS.find(x=>x.id===wid); if(!w)return;
+  if(loadoutSlots()>=LDM_SLOTS){ vsToast("Inventory full — "+LDM_SLOTS+" slots max"); return; }
+  if(ldmIsGun(w)) L.items.push({wid,ammo:"default",sight:null});       // each gun instance is independent
+  else { const ex=L.items.find(it=>it.wid===wid); if(ex) ex.qty=(ex.qty||1)+1; else L.items.push({wid,qty:1}); } // equipment stacks
+  renderLoadout(); }
+function sanitizeLoadout(){ const L=state.ldm, allowed=ldmAllowedIds();
+  L.items=L.items.filter(it=>allowed.has(it.wid));
+  L.items.forEach(it=>{const w=WEAPONS.find(x=>x.id===it.wid); if(!w)return;
+    if(ldmIsGun(w)){ it.ammo=ammoMode(w,it.ammo); if(it.sight&&!ldmSights(w,L.cls).some(m=>m.id===it.sight))it.sight=null; }});
+}
+function ldmGunStats(w,s){
+  const cfg={ammoId:w.defaultAmmo.id,modIds:[],hitbox:"torso",heavyset:"none",fastReload:"none",ironFist:"none",grenadier:"none",stance:"stand"};
+  const r=compute(w,cfg);
+  if([7,8].includes(w.weaponcategoryid)) return `armor ${fmt(r.armorMin,0)}–${fmt(r.armorMax,0)} · pen ${fmt(r.penMin,0)}–${fmt(r.penMax,0)} mm`;
+  if(w.weaponcategoryid===20) return `melee`;
+  const dmg=r.dmgNear===r.dmgFar?fmt(r.dmgNear,0):`${fmt(r.dmgNear,0)}→${fmt(r.dmgFar,0)}`;
+  return `${dmg} hp · ${fmt(r.rpm,0)} rpm · ${fmt(r.rNear,0)}→${fmt(r.rFar,0)} m`;
+}
+// depot (catalog) — every item the class+faction can carry, each with an add button
+function ldmDepotRow(w){
+  const row=el("div","ldm-dep-row fac-"+w.factiontemplateid,`<span class="ldm-dep-n" title="${w.name}">${w.name}</span><span class="ldm-dep-ep">${epDots(w.equipmentPointsCost)}</span>`);
+  const add=el("button","ldm-dep-add","+"); add.title="Add to kit"; if(loadoutSlots()>=LDM_SLOTS)add.disabled=true; add.onclick=()=>ldmAddItem(w.id);
+  row.appendChild(add); return row;
+}
+function ldmDepotGroup(label,list){ if(!list.length) return null;
+  const g=el("div","ldm-dep-grp"); g.appendChild(el("div","ldm-dep-h",label));
+  list.forEach(w=>g.appendChild(ldmDepotRow(w))); return g; }
+function ldmMatch(w){ const L=state.ldm;
+  if(L.q && !w.name.toLowerCase().includes(L.q.trim().toLowerCase())) return false;
+  if(L.cats.length && !L.cats.includes(gameCatOf(w))) return false;
+  return true; }
+// depot categories match the sidebar's merged grouping (CAT_MERGE): Rifles / SMG / LMG / Handguns / AT / Mines / Grenades / Melee / Field Gear
+function ldmCatLabel(w){ return w.weaponcategoryid===4 ? "Field Gear" : ((CAT_MERGE[w.weaponcategoryid]||{}).label || CATEGORIES[w.weaponcategoryid] || ("Category "+w.weaponcategoryid)); }
+function ldmCatOrder(lbl){ if(lbl==="Field Gear") return 9; const e=Object.values(CAT_MERGE).find(x=>x.label===lbl); return e?e.order:99; }
+function ldmDepFill(listEl){
+  listEl.innerHTML=""; const L=state.ldm;
+  const all=[...ldmPrimaries(L.fac,L.cls), ...ldmSecondaries(L.fac), ...ldmEquipment(L.fac,L.cls)].filter(ldmMatch);
+  const groups={}; all.forEach(w=>{ (groups[ldmCatLabel(w)] ??= []).push(w); });
+  Object.keys(groups).sort((a,b)=>ldmCatOrder(a)-ldmCatOrder(b)).forEach(lbl=>listEl.appendChild(ldmDepotGroup(lbl,groups[lbl])));
+  if(!listEl.children.length) listEl.appendChild(el("div","ldm-empty","No items match."));
+}
+function ldmDepot(){
+  const L=state.ldm, box=el("div","ldm-depot");
+  box.appendChild(el("div","ldm-slot-h","Depot"));
+  const search=el("input","ldm-dep-search"); search.type="text"; search.placeholder="search depot…"; search.value=L.q; search.autocomplete="off";
+  const listEl=el("div","ldm-dep-list");
+  search.oninput=()=>{L.q=search.value; ldmDepFill(listEl);};
+  box.appendChild(search);
+  const chips=el("div","catchips ldm-dep-chips");
+  GAME_CATS.forEach(g=>{const b=el("button","catchip"+(L.cats.includes(g.id)?" on":""));b.innerHTML=g.icon;b.title=g.label;b.setAttribute("aria-label",g.label);
+    b.onclick=()=>{const i=L.cats.indexOf(g.id);if(i>=0)L.cats.splice(i,1);else L.cats.push(g.id);renderLoadout();};chips.appendChild(b);});
+  box.appendChild(chips);
+  box.appendChild(listEl); ldmDepFill(listEl);
+  return box;
+}
+// one kit entry (gun: ammo + optic + stats; equipment: quantity stepper)
+function ldmKitCard(it,idx){
+  const w=WEAPONS.find(x=>x.id===it.wid); const card=el("div","ldm-kit-card");
+  const head=el("div","ldm-kit-head",`<span class="ldm-kit-n" title="${w.name}">${w.name}</span><span class="ldm-kit-ep">${epDots(ldmItemEP(it))}</span>`);
+  const rm=el("button","ldm-kit-rm","✕"); rm.title="Remove"; rm.onclick=()=>{state.ldm.items.splice(idx,1);renderLoadout();};
+  head.appendChild(rm); card.appendChild(head);
+  if(ldmIsGun(w)){
+    if(ammoAdjustable(w)){
+      const ar=el("div","ldm-inrow"); ar.appendChild(el("span","ldm-mini-l","Ammo"));
+      const aseg=el("div","seg ldm-ammoseg");
+      const ammoOpts=(ammoCanNone(w)?[["none","None"]]:[]).concat([["default","Default"],["double","Double"]]);
+      ammoOpts.forEach(([m,lbl])=>{const b=el("button",(it.ammo===m?"on":""),lbl);b.onclick=()=>{it.ammo=m;renderLoadout();};aseg.appendChild(b);});
+      ar.appendChild(aseg); card.appendChild(ar);
+      const hoard=rankOf(state.ldm.badges.hoarder);
+      card.appendChild(el("div","ldm-note",`<b>${ammoNotation(w,it.ammo,hoard)}</b>${hoard?` <span class="ldm-bonus">+${hoard} mag</span>`:""}`));
+    }
+    card.appendChild(el("div","ldm-stats",ldmGunStats(w,it)));
+  } else {
+    const qr=el("div","ldm-inrow"); qr.appendChild(el("span","ldm-mini-l","Qty"));
+    const dec=el("button","ldm-qbtn","−"); dec.onclick=()=>{it.qty=Math.max(1,(it.qty||1)-1);renderLoadout();};
+    const qv=el("span","ldm-qv",String(it.qty||1));
+    const inc=el("button","ldm-qbtn","+"); if(loadoutSlots()>=LDM_SLOTS)inc.disabled=true; inc.onclick=()=>{if(loadoutSlots()>=LDM_SLOTS){vsToast("Inventory full — "+LDM_SLOTS+" slots max");return;}it.qty=(it.qty||1)+1;renderLoadout();};
+    qr.appendChild(dec); qr.appendChild(qv); qr.appendChild(inc); card.appendChild(qr);
+    if((w.clipCount||0)>0){ const bonus=ldmEquipBonus(w), qty=it.qty||1, totalBonus=bonus*qty, units=(w.clipCount||1)*qty+totalBonus;
+      card.appendChild(el("div","ldm-note",`carries <b>${units}</b>${totalBonus?` <span class="ldm-bonus">+${totalBonus}</span>`:""}`)); }
+  }
+  return card;
+}
+function renderLoadout(){
+  ldmInit(); sanitizeLoadout();
+  const host=$("#loadoutView"); host.innerHTML="";
+  const L=state.ldm, cls=ldmClassOf(L.cls), cap=cls.ep;
+  host.appendChild(el("h2","ldm-title","Loadout Maker"));
+  const head=el("div","ldm-head");
+  const facWrap=el("div","ldm-ctl"); facWrap.appendChild(el("label",null,"Faction"));
+  const facSeg=el("div","seg ldm-facseg");
+  [[1,"US"],[2,"GE"],[3,"SU"]].forEach(([f,lbl])=>{const color=(FACTIONS[f]||{}).color||"#888", on=L.fac===f;
+    const b=el("button","ldm-facbtn"+(on?" on":""),`<span class="ldm-fdot" style="background:${color}"></span>${lbl}`);
+    if(on){b.style.background=color;b.style.borderColor=color;b.style.color="#161810";}
+    b.onclick=()=>{L.fac=f;renderLoadout();};facSeg.appendChild(b);});
+  facWrap.appendChild(facSeg); head.appendChild(facWrap);
+  const clsWrap=el("div","ldm-ctl"); clsWrap.appendChild(el("label",null,"Soldier class"));
+  const clsSeg=el("div","seg ldm-clsseg");
+  LDM_CLASSES.forEach(c=>{const b=el("button",(L.cls===c.id?"on":""),c.name);b.onclick=()=>{L.cls=c.id;renderLoadout();};clsSeg.appendChild(b);});
+  clsWrap.appendChild(clsSeg); head.appendChild(clsWrap);
+  host.appendChild(head);
+  const bWrap=el("div","ldm-badges"); bWrap.appendChild(el("label","ldm-badges-l","Badges"));
+  const brow=el("div","ldm-badge-row");
+  [["hoarder","Hoarder"],["dynamite","Dynamite Lover"],["medic","Combat Medic"]].forEach(([k,lbl])=>{
+    const col=el("div","ldm-badge"); col.appendChild(el("span","ldm-badge-n",lbl));
+    const sg=el("div","seg"); seg(sg,LDM_RANKS,L.badges[k],id=>{L.badges[k]=id;renderLoadout();}); col.appendChild(sg); brow.appendChild(col);
+  });
+  bWrap.appendChild(brow); host.appendChild(bWrap);
+  const used=loadoutEP(), over=used>cap, slots=loadoutSlots();
+  const meters=el("div","ldm-meters");
+  const meter=el("div","ldm-meter"+(over?" over":""));
+  meter.innerHTML=`<span class="ldm-meter-l">Equipment points</span>${epMeterDots(used,cap)}<span class="ldm-meter-v"><b>${used}</b> / ${cap}${over?' · OVER BUDGET':''}</span>`;
+  meters.appendChild(meter);
+  const smeter=el("div","ldm-meter ldm-slotmeter");
+  smeter.innerHTML=`<span class="ldm-meter-l">Inventory</span>${slotSquares(slots)}<span class="ldm-meter-v"><b>${slots}</b> / ${LDM_SLOTS}</span>`;
+  meters.appendChild(smeter);
+  host.appendChild(meters);
+  const area=el("div","ldm-area");
+  area.appendChild(ldmDepot());
+  const kit=el("div","ldm-kit"); kit.appendChild(el("div","ldm-slot-h",`Your kit · ${loadoutSlots()} / ${LDM_SLOTS} slots`));
+  if(L.items.length){ const grid=el("div","ldm-kit-grid"); L.items.forEach((it,i)=>grid.appendChild(ldmKitCard(it,i))); kit.appendChild(grid); }
+  else kit.appendChild(el("div","ldm-empty","Add weapons and equipment from the depot."));
+  area.appendChild(kit); host.appendChild(area);
+}
+
 function syncTabs(){
   document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute("aria-selected",b.dataset.view===state.view));
   $("#detailView").classList.toggle("hidden",state.view!=="detail");
   $("#tableView").classList.toggle("active",state.view==="table");
   $("#versusView").classList.toggle("active",state.view==="versus");
+  $("#loadoutView").classList.toggle("active",state.view==="loadout");
   if(state.mode==="veh"){
     if(state.view==="table"){ renderVehicleTable(); }
     else if(state.view==="versus"){ renderVehicleVersus(); }
@@ -2549,6 +2863,7 @@ function syncTabs(){
   }
   if(state.view==="table")renderTable();
   else if(state.view==="versus")renderVersus();
+  else if(state.view==="loadout")renderLoadout();
   else renderDetail();
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;syncTabs();});
